@@ -11,7 +11,8 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-int calc_opticalflow(string pathL, string pathR, bool gpuMode)
+
+float calc_opticalflow(string pathL, string pathR, bool gpuMode, Mat &flowx, Mat &flowy)
 {
     if (pathL.empty()) cout << "Specify left image path\n";
     if (pathR.empty()) cout << "Specify right image path\n";
@@ -26,7 +27,7 @@ int calc_opticalflow(string pathL, string pathR, bool gpuMode)
     GpuMat d_frameL(frameL), d_frameR(frameR);
     GpuMat d_flowx, d_flowy;
     FarnebackOpticalFlow d_calc;
-    Mat flowxy, flowx, flowy, image;
+    Mat flowxy;
 
     int64 tc0, tc1;
 
@@ -56,7 +57,5 @@ int calc_opticalflow(string pathL, string pathR, bool gpuMode)
         flowx = planes[0]; flowy = planes[1];
     }
 
-    cout << "time: " << (tc1-tc0)/getTickFrequency() << std::endl;
-
-    return 0;
+    return (tc1-tc0)/getTickFrequency();
 }
