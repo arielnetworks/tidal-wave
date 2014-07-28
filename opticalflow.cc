@@ -19,6 +19,8 @@ float calc_opticalflow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx,
 static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const Local<Array> &results) {
     Persistent<String> x_symbol = NODE_PSYMBOL("x");
     Persistent<String> y_symbol = NODE_PSYMBOL("y");
+    Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
+    Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
     Persistent<String> len_symbol = NODE_PSYMBOL("len");
 
     int i = 0;
@@ -33,6 +35,8 @@ static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const Local<A
                 Local<Object> obj = Object::New();
                 obj->Set(x_symbol, Integer::New(x));
                 obj->Set(y_symbol, Integer::New(y));
+                obj->Set(dx_symbol, Number::New(dx));
+                obj->Set(dy_symbol, Number::New(dy));
                 obj->Set(len_symbol, Number::New(len));
                 results->Set(i++, obj);
             }
@@ -59,6 +63,7 @@ Handle<Value> Method(const Arguments& args) {
   const unsigned argc = 1;
   Local<Value> argv[argc] = { Local<Value>::New(results) };
   cb->Call(Context::GetCurrent()->Global(), argc, argv);
+  std::cout << "time: " << t << std::endl;
   return scope.Close(Undefined());
 }
 
