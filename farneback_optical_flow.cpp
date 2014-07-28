@@ -12,19 +12,25 @@ using namespace cv;
 using namespace cv::gpu;
 
 
-float calc_opticalflow(string pathL, string pathR, bool gpuMode, Mat &flowx, Mat &flowy)
+float calc_opticalflow(string expectImgPath, string targetImgPath, bool gpuMode, Mat &flowx, Mat &flowy)
 {
-    if (pathL.empty()) cout << "Specify left image path\n";
-    if (pathR.empty()) cout << "Specify right image path\n";
-    if (pathL.empty() || pathR.empty()) return -1;
+    if (expectImgPath.empty()) cout << "Specify left image path\n";
+    if (targetImgPath.empty()) cout << "Specify right image path\n";
+    if (expectImgPath.empty() || targetImgPath.empty()) return -1;
 
-    Mat frameL = imread(pathL, IMREAD_GRAYSCALE);
-    Mat frameR = imread(pathR, IMREAD_GRAYSCALE);
-    if (frameL.empty()) cout << "Can't open '" << pathL << "'\n";
-    if (frameR.empty()) cout << "Can't open '" << pathR << "'\n";
-    if (frameL.empty() || frameR.empty()) return -1;
+    Mat expectImg = imread(expectImgPath, IMREAD_GRAYSCALE);
+    Mat targetImg = imread(targetImgPath, IMREAD_GRAYSCALE);
+    if (expectImg.empty()) cout << "Can't open '" << expectImgPath << "'\n";
+    if (targetImg.empty()) cout << "Can't open '" << targetImgPath << "'\n";
+    if (expectImg.empty() || targetImg.empty()) return -1;
 
-    GpuMat d_frameL(frameL), d_frameR(frameR);
+    if (expectImg.rows != targetImg.rows || expectImg.cols != targetImg.cols) {
+      Mat resizedTargetImg(expectImg.rows, expectImg.cols, expectImg.type());
+      cv::resize(targetImg, resizedTargetImg, resizedTargetImg.size(), cv::INTER_NEAREST);
+      targetImg = resizedTargetImg;
+    }
+
+    GpuMat d_frameL(expectImg), d_targetImg(targetImg);
     GpuMat d_flowx, d_flowy;
     FarnebackOpticalFlow d_calc;
     Mat flowxy;
@@ -41,14 +47,14 @@ float calc_opticalflow(string pathL, string pathR, bool gpuMode, Mat &flowx, Mat
 
     if (gpuMode) {
         tc0 = getTickCount();
-        d_calc(d_frameL, d_frameR, d_flowx, d_flowy);
+        d_calc(d_frameL, d_targetImg, d_flowx, d_flowy);
         tc1 = getTickCount();
         d_flowx.download(flowx);
         d_flowy.download(flowy);
     } else {
         tc0 = getTickCount();
         calcOpticalFlowFarneback(
-                    frameL, frameR, flowxy, d_calc.pyrScale, d_calc.numLevels, d_calc.winSize,
+                    expectImg, targetImg, flowxy, d_calc.pyrScale, d_calc.numLevels, d_calc.winSize,
                     d_calc.numIters, d_calc.polyN, d_calc.polySigma, d_calc.flags);
         tc1 = getTickCount();
 

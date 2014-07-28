@@ -1,3 +1,11 @@
+= node-optical-flow
+
+OpenCVのOpticalFlowを利用し、2つの画像の差分情報を返すサービス
+
+== 使い方
+
+== メモ
+
 export PATH=/usr/local/cuda-6.0/bin/:$PATH
 export LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/cuda-6.0/lib64/:$LD_LIBRARY_PATH
 . ~/.nvm/nvm.sh 

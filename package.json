@@ -1,18 +1,13 @@
 {
   "name": "node-optical-flow",
   "version": "0.0.0",
-  "description": "export PATH=/usr/local/cuda-6.0/bin/:$PATH export LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/cuda-6.0/lib64/:$LD_LIBRARY_PATH . ~/.nvm/nvm.sh  nvm use v0.10.29 node-gyp configure node-gyp build",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "install": "node-gyp rebuild"
-  },
+  "description": "",
   "repository": {
     "type": "git",
     "url": "http://legion.ariel-networks.com/gitbucket/git/leviathan/node-optical-flow.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "ikezoe_a",
+  "license": "MIT",
   "gypfile": true,
   "dependencies": {
     "express": "^4.7.2",
