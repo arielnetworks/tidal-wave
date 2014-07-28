@@ -1,11 +1,19 @@
+#include <iostream>
+#include <vector>
+#include <sstream>
+
 #include <node.h>
 #include <v8.h>
 
 using namespace v8;
+using namespace std;
+
+int calc_opticalflow(string pathL, string pathR, bool gpuMode);
 
 Handle<Value> Method(const Arguments& args) {
   HandleScope scope;
-  return scope.Close(String::New("world"));
+  int t = calc_opticalflow("customjsp1.png", "customjsp2.png", false);
+  return scope.Close(Integer::New(t));
 }
 
 void init(Handle<Object> exports) {
