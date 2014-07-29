@@ -1,17 +1,14 @@
-var http = require('http'),
-    io = require('socket.io');
+var express = require('express'),
+    http = require('http'),
+    io = require('socket.io')
+    app = express();
+
+var server = http.createServer(app);
+server.listen(5000);
+
+app.use(express.static(__dirname + '/public'));
 
 var opticalflow = require('./build/Release/opticalflow').opticalflow;
-
-
-console.log("hello");
-
-var server = http.createServer(function(req, res) {
-  res.writeHead(200, {'Content-Type': 'text/html'});
-  res.write('<h1>テスト</h1>');
-  res.end();
-});
-server.listen(5000);
 
 var socket = io.listen(server);
 
