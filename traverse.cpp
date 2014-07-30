@@ -60,8 +60,7 @@ bool traverse(const string filepath, const int maxdepth, int curdepth, vector<st
                         return canread;
                     }
                 }
-                else
-                {
+                else {
                     list.push_back(curpath);
                 }
             }
@@ -89,7 +88,9 @@ int main(int argc, char* argv[])
         fprintf(stdout,"    crossls [filepath]\n");
     }
     for( vector<string>::iterator it = list.begin(); it != list.end(); ++it) {
-      cout << *it << endl;
+      string tmp = *it;
+      string a = tmp.substr(strlen(argv[1])+1);
+      cout << a << endl;
     }
     return 0;
 }

@@ -14,6 +14,7 @@ using namespace v8;
 using namespace std;
 
 
+int consprod();
 float calc_opticalflow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
 
 static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const double threshold, const int span, const Local<Array> &results) {
@@ -46,6 +47,8 @@ static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const double 
 
 Handle<Value> Method(const Arguments& args) {
   HandleScope scope;
+
+  consprod();
   
   v8::String::Utf8Value param1(args[0]->ToString());
   v8::String::Utf8Value param2(args[1]->ToString());

@@ -4,7 +4,9 @@
       "target_name": "opticalflow",
       "sources": [ 
         "opticalflow.cc",
-        "farneback_optical_flow.cpp"
+        "farneback_optical_flow.cpp",
+        "traverse.cpp",
+        "consprod.cpp"
       ],
       "cflags_cc": [ "<!@(pkg-config --cflags opencv)" ],
       "libraries": [ 
