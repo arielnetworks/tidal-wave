@@ -7,12 +7,21 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
- 
+
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/video/video.hpp"
+#include "opencv2/gpu/gpu.hpp"
+
+#include <node.h>
+#include <v8.h>
 #include "uv.h"
+
  
 #define MAX_CONSUMERS 3
 #define MAX_LOOPS 1
 
+using namespace v8;
 using namespace std;
  
 bool traverse(const string filepath, const int maxdepth, int curdepth, vector<string> &list);
@@ -26,8 +35,8 @@ typedef struct {
 
 typedef struct {
   ngx_queue_t queue;
-  char expect_path[255];
-  char target_path[255];
+  cv::Mat *flowx;
+  cv::Mat *flowy;
 } response_buffer;
  
 static ngx_queue_t req_queue;
@@ -38,7 +47,6 @@ static uv_mutex_t res_mutex;
 static uv_cond_t empty;
 static uv_cond_t full;
 
-static volatile int finished_consumers = 0;
 static volatile int request_number = 0;
 static volatile int finished_requests = 0;
 static volatile bool isRunning = true;
@@ -54,6 +62,36 @@ typedef struct {
 typedef struct {
   int num;
 } consumer_arg;
+
+float calc_opticalflow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
+
+static void copyToNode(const cv::Mat *flowx, const cv::Mat *flowy, const double threshold, const int span, const Local<Array> &results) {
+    Persistent<String> x_symbol = NODE_PSYMBOL("x");
+    Persistent<String> y_symbol = NODE_PSYMBOL("y");
+    Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
+    Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
+    Persistent<String> len_symbol = NODE_PSYMBOL("len");
+
+    int i = 0;
+    for (int y = 0; y < flowx->rows; ++y) {
+        if ( y % span != 0 ) continue;
+        for (int x = 0; x < flowx->cols; ++x) {
+            if ( x % span != 0 ) continue;
+            float dx = flowx->at<float>(y,x);
+            float dy = flowy->at<float>(y,x);
+            float len = (dx*dx) + (dy*dy);
+            if (len > (threshold*threshold)) {
+                Local<Object> obj = Object::New();
+                obj->Set(x_symbol, Integer::New(x));
+                obj->Set(y_symbol, Integer::New(y));
+                obj->Set(dx_symbol, Number::New(dx));
+                obj->Set(dy_symbol, Number::New(dy));
+                //obj->Set(len_symbol, Number::New(len));
+                results->Set(i++, obj);
+            }
+        }
+    }
+}
 
 static void producer(void* arg) {
   producer_arg *parg = (producer_arg*)arg;
@@ -106,19 +144,29 @@ static void consumer(void* arg) {
     ngx_queue_remove(q);
  
     buf = ngx_queue_data(q, request_buffer, queue);
-    string data = string(buf->expect_path);
-    free(buf);
+    string expect_path = string(buf->expect_path);
+    string target_path = string(buf->target_path);
 
-    uv_cond_signal(&empty);
     uv_mutex_unlock(&req_mutex);
 
 
+    cv::Mat *flowx = new cv::Mat();
+    cv::Mat *flowy = new cv::Mat();
+    cout << "opticalflow: " << expect_path << ":" << target_path << endl;
+    float t = calc_opticalflow(expect_path, target_path, false, *flowx, *flowy);
+
+cout << "finish opticalflow " << t << endl;
+
+    free(buf);
     
     uv_mutex_lock(&res_mutex);
     response_buffer* res_buf;
     res_buf = (response_buffer*)malloc(sizeof(response_buffer));
     ngx_queue_init(&res_buf->queue);
-    ngx_queue_insert_tail(&req_queue, &res_buf->queue);
+    res_buf->flowx = flowx;
+    res_buf->flowy = flowy;
+    ngx_queue_insert_tail(&res_queue, &res_buf->queue);
+    uv_cond_signal(&empty);
     uv_mutex_unlock(&res_mutex);
 
     finished_requests++;
@@ -126,10 +174,14 @@ static void consumer(void* arg) {
   cout << "finish consumer"  << carg->num << endl;
 }
  
-int consprod() {
+int consprod(const string expect_path, const string target_path, const double threshold, const int span, Local<Function> &cb) {
   int i;
   uv_thread_t cthreads[MAX_CONSUMERS];
   uv_thread_t pthread;
+
+request_number = 0;
+finished_requests = 0;
+isRunning = true;
  
   fprintf(stdout, "=== start consumer-producer test ===\n");
   ngx_queue_init(&req_queue);
@@ -147,15 +199,41 @@ int consprod() {
   }
  
   producer_arg parg;
-  parg.expect_path = string("./public/images");
-  parg.target_path = string("./public/images");
+  parg.expect_path = expect_path;
+  parg.target_path = target_path;
 
   assert(0 == uv_thread_create(&pthread, producer, (void*)&parg));
   assert(0 == uv_thread_join(&pthread));
 
-  while(!ngx_queue_empty(&res_queue)) {
-    uv_cond_wait(&empty, &res_mutex);
+
+  int push_count = 0;
+  cout << "request number : " << request_number << endl;
+  while(request_number != push_count){
+    while(ngx_queue_empty(&res_queue)) {
+      uv_cond_wait(&empty, &res_mutex);
+    }
+    push_count++;
+    cout << "pop!!" << endl;
+
+    ngx_queue_t *q;
+    response_buffer *buf;
+    assert(!ngx_queue_empty(&res_queue));
+    q = ngx_queue_last(&res_queue);
+    ngx_queue_remove(q);
+ 
+    buf = ngx_queue_data(q, response_buffer, queue);
+    Local<Array> results = Array::New();
+    copyToNode(buf->flowx, buf->flowy, threshold, span, results);
+
+    const unsigned argc = 1;
+    Local<Value> argv[argc] = { Local<Value>::New(results) };
+    cb->Call(Context::GetCurrent()->Global(), argc, argv);
+
+    delete buf->flowx;
+    delete buf->flowy;
+    free(buf);
   }
+
 
   isRunning = false;
 
@@ -165,11 +243,11 @@ int consprod() {
     assert(0 == uv_thread_join(&cthreads[i]));
   }
 
+  
   uv_cond_destroy(&empty);
   uv_cond_destroy(&full);
   uv_mutex_destroy(&req_mutex);
   uv_mutex_destroy(&res_mutex);
-  cout << "request number : " << request_number << endl;
  
   fprintf(stdout, "=== end consumer-producer test ===\n");
   return 0;

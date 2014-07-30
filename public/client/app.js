@@ -10,8 +10,8 @@ angular.module('app', [])
     });
 
     socket.send({
-      'expect_image': 'customjsp1.png',
-      'target_image': 'customjsp2.png',
+      'expect_image': './public/images',
+      'target_image': './public/images2',
       'threshold': 5,
       'span': 10
     });
