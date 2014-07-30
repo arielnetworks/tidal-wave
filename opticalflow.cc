@@ -16,7 +16,7 @@ using namespace std;
 
 float calc_opticalflow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
 
-static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const Local<Array> &results) {
+static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const double threshold, const int span, const Local<Array> &results) {
     Persistent<String> x_symbol = NODE_PSYMBOL("x");
     Persistent<String> y_symbol = NODE_PSYMBOL("y");
     Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
@@ -25,19 +25,19 @@ static void copyToNode(const cv::Mat &flowx, const cv::Mat &flowy, const Local<A
 
     int i = 0;
     for (int y = 0; y < flowx.rows; ++y) {
-        if ( y % 5 != 0 ) continue;
+        if ( y % span != 0 ) continue;
         for (int x = 0; x < flowx.cols; ++x) {
-            if ( x % 5 != 0 ) continue;
+            if ( x % span != 0 ) continue;
             float dx = flowx.at<float>(y,x);
             float dy = flowy.at<float>(y,x);
             float len = (dx*dx) + (dy*dy);
-            if (len > 25) {
+            if (len > (threshold*threshold)) {
                 Local<Object> obj = Object::New();
                 obj->Set(x_symbol, Integer::New(x));
                 obj->Set(y_symbol, Integer::New(y));
                 obj->Set(dx_symbol, Number::New(dx));
                 obj->Set(dy_symbol, Number::New(dy));
-                obj->Set(len_symbol, Number::New(len));
+                //obj->Set(len_symbol, Number::New(len));
                 results->Set(i++, obj);
             }
         }
@@ -53,12 +53,15 @@ Handle<Value> Method(const Arguments& args) {
   string image1 = std::string(*param1);
   string image2 = std::string(*param2);
 
-  Local<Function> cb = Local<Function>::Cast(args[2]);
+  double threshold = args[2]->NumberValue();
+  int span = args[3]->IntegerValue();
+
+  Local<Function> cb = Local<Function>::Cast(args[4]);
   cv::Mat flowx, flowy;
   float t = calc_opticalflow(image1, image2, false, flowx, flowy);
 
   Local<Array> results = Array::New();
-  copyToNode(flowx, flowy, results);
+  copyToNode(flowx, flowy, threshold, span, results);
   
   const unsigned argc = 1;
   Local<Value> argv[argc] = { Local<Value>::New(results) };

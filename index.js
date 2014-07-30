@@ -16,9 +16,14 @@ socket.on('connection', function(client) {
   console.log('connection');
   client.on('message', function(data) {
     console.log(data);
-    opticalflow(data.expect_image, data.target_image, function(msg){
-      console.log(msg.length);
-      client.send(msg);
-    });
+    opticalflow(
+      data.expect_image,
+      data.target_image,
+      data.threshold ? data.threshold : 5,
+      data.span ? data.span : 10,
+      function(msg){
+        console.log(msg.length);
+        client.send(msg);
+      });
   });
 });
