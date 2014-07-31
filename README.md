@@ -52,11 +52,11 @@ sudo ./cuda_6.0.37_linux_64.run
 * パスを通す
 
 ~~~
-export PATH includes="/usr/local/cuda-6.0/bin"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda-6.0/lib64"
+export PATH=/usr/local/cuda-6.0/bin/:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-6.0/lib64/:$LD_LIBRARY_PATH
 ~~~
 
-* Xを再開
+* Xを起動
 
 ~~~
 sudo service lightdm start
@@ -117,6 +117,10 @@ Result = PASS
 ~~~
 
 ### OpenCVのインストール
+
+CUDAを有効にする必要があるので、ソースからビルドしなければならない。
+
+Core i5 750で並列コンパイルしなかった場合、makeでだいたい4時間くらいかかる。
 
 ~~~
 sudo apt-get install cmake
@@ -184,8 +188,7 @@ node index.js
   'target_path': 'public/images2',
   'threshold': 5,
   'span': 10
-});
-
+}
 ~~~
 
 ### レスポンス
@@ -203,16 +206,18 @@ node index.js
 * status: ステータス（OK, SUSPICIOUS,ERRORの3つ）
 
 ~~~
-vector[
-  { x: 60, y: 1160, dx: -0.7929320931434631, dy: 7.249414443969727 },
-  { x: 70, y: 1160, dx: 2.1631455421447754, dy: 7.150839328765869 },
-  { x: 80, y: 1160, dx: 3.28291392326355, dy: 6.485356330871582 }
-],
-expect image: public/images/customjsp2.png,
-target image: public/images2/customjsp2.png,
-span: 10
-threshold: 5
-time: 2.4183433055877686
-status: SUSPICIOUS
+{
+  vector: [
+    { x: 60, y: 1160, dx: -0.7929320931434631, dy: 7.249414443969727 },
+    { x: 70, y: 1160, dx: 2.1631455421447754, dy: 7.150839328765869 },
+    { x: 80, y: 1160, dx: 3.28291392326355, dy: 6.485356330871582 }
+  ],
+  expect image: public/images/customjsp2.png,
+  target image: public/images2/customjsp2.png,
+  span: 10
+  threshold: 5
+  time: 2.4183433055877686
+  status: SUSPICIOUS
+}
 ~~~
 

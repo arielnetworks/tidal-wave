@@ -5,7 +5,7 @@ angular.module('app', [])
     var socket = io('ws://10.0.2.90:5000');
     socket.on('message', function(data) {
       $scope.$apply(function(){
-        $scope.data = data;
+        $scope.data = data.vector;
       });
     });
 

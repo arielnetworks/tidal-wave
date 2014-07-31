@@ -27,7 +27,6 @@ bool listFiles(const string filepath, int curdepth, vector<string> &list);
 
 typedef struct {
   ngx_queue_t queue;
-  int data;
   char expect_image[255];
   char target_image[255];
 } RequestBuffer;
@@ -123,7 +122,7 @@ static void createResult(
   } 
 }
 
-// 指定されたディレクトリをトラバースして、画像比較処理の依頼をおこなう
+// 指定された2つのディレクトリの中からパスが一致する画像の組を作って、画像比較処理の依頼をおこなう
 static void producerThread(void* arg) {
   ProducerArg *parg = (ProducerArg*)arg;
 
@@ -246,6 +245,7 @@ int dispatch(const string expect_path, const string target_path, const double th
   assert(0 == uv_thread_create(&pthread, producerThread, (void*)&parg));
 
   // ProducerThreadが完了するまで待つ
+  // XXX: ここで待ったらスレッドにする意味なくない？
   assert(0 == uv_thread_join(&pthread));
 
   int finished_count = 0;
