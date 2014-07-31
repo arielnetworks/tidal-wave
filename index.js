@@ -17,8 +17,8 @@ socket.on('connection', function(client) {
   client.on('message', function(data) {
     console.log(data);
     opticalflow(
-      data.expect_image,
-      data.target_image,
+      data.expect_path,
+      data.target_path,
       data.threshold ? data.threshold : 5,
       data.span ? data.span : 10,
       function(msg){

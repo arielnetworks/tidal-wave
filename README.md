@@ -1,20 +1,28 @@
-# node-optical-flow
+# tidal-wave
 
-OpenCVのOpticalFlowを利用し、2つの画像の差分情報を返すサービス
+並列実行で小さなflowをたくさんつくり、大きな津波を発生させるWebサービス。
+
+防波堤(しきい値)が低いと高波にのまれてしまうので注意。
+
+## なにするもの？
+
+![処理の流れ](flow.png)
 
 ## 必要なもの
 
-* gcc-4.6
-  * 最新のgccだとcudaが対応していないので古いもの。
-  * カーネルも同じコンパイラでビルドされてる必要がある。(Ubuntu 12.04とか)
 * cuda-6.0
+    * gcc-4.6
+    * 最新のgccだとcudaが対応していないので古いもの。
+    * Distributionによって使えるgccのバージョンが異なるので注意。以下を参照。
+    * http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-linux/#abstract
+    * Ubuntu 14.04は未対応。
 * node.js 0.10.x
-  * node-gyp
+    * node-gyp
 * OpenCV 2.4.x
-  * cmake
+    * cmake
 
 * CUDAに対応したNVIDIA製のグラフィックボード
-  * https://developer.nvidia.com/cuda-gpus
+    * https://developer.nvidia.com/cuda-gpus
 
 ## 環境構築方法
 
@@ -23,27 +31,41 @@ OpenCVのOpticalFlowを利用し、2つの画像の差分情報を返すサー�
 * sudo apt-get install gcc g++
 
 * 下記のサイトからcudaのインストーラをダウンロード
-  * https://developer.nvidia.com/cuda-downloads
-  * cuda_6.0.37_linux_64.run
+    * https://developer.nvidia.com/cuda-downloads
+    * cuda_6.0.37_linux_64.run
 
 * Xを停止する
-  * Ctrl+Alt+F1でコンソールモードでログイン
-  * sudo service lightdm stop
+    * Ctrl+Alt+F1でコンソールモードでログイン
+
+~~~
+sudo service lightdm stop
+~~~
+
 * cuda toolkitのインストール
-  * chmod +x cuda_6.0.37_linux_64.run
-  * sudo ./cuda_6.0.37_linux_64.run
-  * 色々質問されるけど、基本全部y。ディレクトリはデフォルトのままで。
+    * 色々質問されるけど、基本全部y。ディレクトリはデフォルトのままで。
+~~~
+chmod +x cuda_6.0.37_linux_64.run
+sudo ./cuda_6.0.37_linux_64.run
+~~~
+
 * パスを通す
-  * export PATH includes="/usr/local/cuda-6.0/bin"
-  * export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda-6.0/lib64"
+~~~
+export PATH includes="/usr/local/cuda-6.0/bin"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda-6.0/lib64"
+~~~
+
 * Xを再開
-  * sudo service lightdm start
+~~~
+sudo service lightdm start
+~~~
 
 * cudaのサンプルを動かしてみる
-  * cd ~/NVIDIA_CUDA-6.0_Samples
-  * cd 1_Utilities/deviceQuery
-  * make
-  * ./deviceQuery
+~~~
+cd ~/NVIDIA_CUDA-6.0_Samples
+cd 1_Utilities/deviceQuery
+make
+./deviceQuery
+~~~
 
 エラーが出ずにこんなのがでればOK
 
@@ -92,40 +114,72 @@ Result = PASS
 
 ### OpenCVのインストール
 
-* sudo apt-get install cmake
-* sudo apt-get install pkg-config
-
-* sudo ln -s /usr/lib/nvidia-current/libnvcuvid.so /usr/lib/libnvcuvid.so
+~~~
+sudo apt-get install cmake
+sudo apt-get install pkg-config
+sudo ln -s /usr/lib/nvidia-current/libnvcuvid.so /usr/lib/libnvcuvid.so
+~~~
 
 * OpenCVのソースダウンロード
-  * http://opencv.org/downloads.html
-  * opencv-2.4.9.zip
+    * http://opencv.org/downloads.html
+    * opencv-2.4.9.zip
 * ビルド
-  * unzip opencv-2.4.9.zip
-  * cd opencv-2.4.9
-  * cmake -DWITH_CUDA=ON -DWITH_TBB=ON -DBUILD_NEW_PYTHON_SUPPORT=ON -DWITH_V4L=ON -DINSTALL_C_EXAMPLES=ON -DINSTALL_PYTHON_EXAMPLES=ON -DBUILD_EXAMPLES=ON -DWITH_QT=OFF -DWITH_OPENGL=ON
-  * make
-  * sudo make install
+~~~
+unzip opencv-2.4.9.zip
+cd opencv-2.4.9
+cmake -DWITH_CUDA=ON -DWITH_TBB=ON -DBUILD_NEW_PYTHON_SUPPORT=ON -DWITH_V4L=ON -DINSTALL_C_EXAMPLES=ON -DINSTALL_PYTHON_EXAMPLES=ON -DBUILD_EXAMPLES=ON -DWITH_QT=OFF -DWITH_OPENGL=ON
+make
+sudo make install
+~~~
 
 * サンプルを動かしてみる
-  * cp /usr/local/share/OpenCV/samples/gpu/farneback_optical_flow.cpp ./
-  * g++ farneback_optical_flow.cpp `/usr/bin/pkg-config --cflags --libs opencv` -L/usr/local/cuda-6.0/lib64
-  * ./a.out -l hoge.png -r fuga.png
+~~~
+cp /usr/local/share/OpenCV/samples/gpu/farneback_optical_flow.cpp ./
+g++ farneback_optical_flow.cpp `/usr/bin/pkg-config --cflags --libs opencv` -L/usr/local/cuda-6.0/lib64
+./a.out -l hoge.png -r fuga.png
+~~~
 
 ### tidal-waveのための環境構築
 
-* npm install -g node-gyp
+~~~
+npm install -g node-gyp
+~~~
 
 
 ## 使い方
 
 ### ビルド
 
-* npm install
-* node-gyp configure
-* node-gyp build
+~~~
+npm install
+node-gyp configure
+node-gyp build
+~~~
 
 ### 実行
 
-* node index.js
+~~~
+node index.js
+~~~
+
+## インタフェース
+
+
+### リクエスト
+
+* expect_path
+* target_path
+* threshold
+* span
+
+### レスポンス
+
+* キャプチャID 
+* キャプチャタイトル
+* 差分データ詳細
+* 差分データの span, threshold などこちらから送った内容 （画像サイズ自体が大きく異なった場合、なし）
+* 画像への公開パス（expected, target の2つ）
+* 処理にかかった時間とか？
+* ステータス（OK, SUSPICIOUS, 画像サイズ自体違うから絶対NG の3つ）
+
 

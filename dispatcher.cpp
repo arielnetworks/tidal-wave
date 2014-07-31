@@ -17,239 +17,278 @@
 #include <v8.h>
 #include "uv.h"
 
-#define MAX_CONSUMERS 3
+// CPUのコア数とGPUのデバイス数の合計に設定すると最もパフォーマンスがよい
+#define MAX_CONSUMERS 5
 
 using namespace v8;
 using namespace std;
  
-bool traverse(const string filepath, const int maxdepth, int curdepth, vector<string> &list);
+bool listFiles(const string filepath, int curdepth, vector<string> &list);
 
 typedef struct {
   ngx_queue_t queue;
   int data;
-  char expect_path[255];
-  char target_path[255];
-} request_buffer;
+  char expect_image[255];
+  char target_image[255];
+} RequestBuffer;
 
 typedef struct {
   ngx_queue_t queue;
   cv::Mat *flowx;
   cv::Mat *flowy;
-} response_buffer;
- 
+  char expect_image[255];
+  char target_image[255];
+  float time;
+} ResponseBuffer;
+
+typedef struct {
+  string expect_path;
+  string target_path;
+} ProducerArg;
+
+typedef struct {
+  int num;
+} ConsumerArg;
+
 static ngx_queue_t req_queue;
 static ngx_queue_t res_queue;
 
 static uv_mutex_t req_mutex;
 static uv_mutex_t res_mutex;
-static uv_cond_t empty;
-static uv_cond_t full;
+static uv_cond_t responseNotification;
+static uv_cond_t requestNotification;
 
-static volatile int request_number = 0;
-static volatile int finished_requests = 0;
+static volatile int request_count = 0;
 static volatile bool isRunning = true;
 
- 
- 
- 
-typedef struct {
-  string expect_path;
-  string target_path;
-} producer_arg;
+float calcOpticalFlow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
 
-typedef struct {
-  int num;
-} consumer_arg;
+// 解析結果をNode.jsで扱える型で生成
+static void createResult(
+  const string expect_image, const string target_image,
+  const cv::Mat *flowx, const cv::Mat *flowy,
+  const double threshold, const int span,
+  const float time,
+  const Local<Object> &result) {
 
-float calc_opticalflow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
+	Persistent<String> time_symbol = NODE_PSYMBOL("time");
+	Persistent<String> status_symbol = NODE_PSYMBOL("status");
 
-static void copyToNode(const cv::Mat *flowx, const cv::Mat *flowy, const double threshold, const int span, const Local<Array> &results) {
-    Persistent<String> x_symbol = NODE_PSYMBOL("x");
-    Persistent<String> y_symbol = NODE_PSYMBOL("y");
-    Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
-    Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
-    Persistent<String> len_symbol = NODE_PSYMBOL("len");
+	Persistent<String> span_symbol = NODE_PSYMBOL("span");
+	Persistent<String> threshold_symbol = NODE_PSYMBOL("threshold");
+	Persistent<String> expect_symbol = NODE_PSYMBOL("expect_image");
+	Persistent<String> target_symbol = NODE_PSYMBOL("target_image");
 
-    int i = 0;
-    for (int y = 0; y < flowx->rows; ++y) {
-        if ( y % span != 0 ) continue;
-        for (int x = 0; x < flowx->cols; ++x) {
-            if ( x % span != 0 ) continue;
-            float dx = flowx->at<float>(y,x);
-            float dy = flowy->at<float>(y,x);
-            float len = (dx*dx) + (dy*dy);
-            if (len > (threshold*threshold)) {
-                Local<Object> obj = Object::New();
-                obj->Set(x_symbol, Integer::New(x));
-                obj->Set(y_symbol, Integer::New(y));
-                obj->Set(dx_symbol, Number::New(dx));
-                obj->Set(dy_symbol, Number::New(dy));
-                //obj->Set(len_symbol, Number::New(len));
-                results->Set(i++, obj);
-            }
-        }
-    }
+	Persistent<String> vector_symbol = NODE_PSYMBOL("vector");
+	Persistent<String> x_symbol = NODE_PSYMBOL("x");
+	Persistent<String> y_symbol = NODE_PSYMBOL("y");
+	Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
+	Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
+
+	result->Set(span_symbol, Integer::New(time));
+	result->Set(threshold_symbol, Number::New(time));
+	result->Set(expect_symbol, String::New(expect_image.c_str()));
+	result->Set(target_symbol, String::New(target_image.c_str()));
+
+	result->Set(time_symbol, Number::New(time));
+
+  Local<Array> vectors = Array::New();
+	int vector_len = 0;
+	for (int y = 0; y < flowx->rows; ++y) {
+		if ( y % span != 0 ) continue;
+		for (int x = 0; x < flowx->cols; ++x) {
+			if ( x % span != 0 ) continue;
+			float dx = flowx->at<float>(y,x);
+			float dy = flowy->at<float>(y,x);
+			float len = (dx*dx) + (dy*dy);
+			if (len > (threshold*threshold)) {
+				Local<Object> v = Object::New();
+				v->Set(x_symbol, Integer::New(x));
+				v->Set(y_symbol, Integer::New(y));
+				v->Set(dx_symbol, Number::New(dx));
+				v->Set(dy_symbol, Number::New(dy));
+				vectors->Set(vector_len++, v);
+			}
+		}
+	}
+	result->Set(vector_symbol, vectors);
 }
 
-static void producer(void* arg) {
-  producer_arg *parg = (producer_arg*)arg;
+// 指定されたディレクトリをトラバースして、画像比較処理の依頼をおこなう
+static void producerThread(void* arg) {
+  ProducerArg *parg = (ProducerArg*)arg;
 
   vector<string> expect_files;
   vector<string> target_files;
 
-  traverse(parg->expect_path, 0, 1, expect_files);
-  traverse(parg->target_path, 0, 1, target_files);
+  listFiles(parg->expect_path, 1, expect_files);
+  listFiles(parg->target_path, 1, target_files);
 
   for(vector<string>::iterator tit = target_files.begin(); tit != target_files.end(); ++tit) {
     for(vector<string>::iterator eit = expect_files.begin(); eit != expect_files.end(); ++eit) {
-      string expect = (*eit).substr(parg->expect_path.length()+1);
-      string target = (*tit).substr(parg->target_path.length()+1);
-      if (target == expect) {
+      string expect_image = (*eit).substr(parg->expect_path.length()+1);
+      string target_image = (*tit).substr(parg->target_path.length()+1);
+      // expect_pathとtarget_pathの中に同じ名前のファイルが見つかったら処理を依頼
+      if (target_image == expect_image) {
         uv_mutex_lock(&req_mutex);
-        request_buffer* buf;
-        buf = (request_buffer*)malloc(sizeof(request_buffer));
-        ngx_queue_init(&buf->queue);
-        strcpy(buf->expect_path, (*eit).c_str());
-        strcpy(buf->target_path, (*tit).c_str());
-        ngx_queue_insert_tail(&req_queue, &buf->queue);
+        RequestBuffer* req_buf;
+        req_buf = new RequestBuffer();
+        ngx_queue_init(&req_buf->queue);
+        strcpy(req_buf->expect_image, (*eit).c_str());
+        strcpy(req_buf->target_image, (*tit).c_str());
+        ngx_queue_insert_tail(&req_queue, &req_buf->queue);
         uv_mutex_unlock(&req_mutex);
-        uv_cond_signal(&full);
-        request_number++;
+        uv_cond_signal(&requestNotification);
+        request_count++;
         break;
       }
     }
   }
   cout << "finish producer" << endl;
 }
- 
-static void consumer(void* arg) {
-  consumer_arg *carg = (consumer_arg*)arg;
 
-  //cv::gpu::setDevice(carg->num);
+// キューから依頼を取得して、OpticalFlow処理を実行する
+static void consumerThread(void* arg) {
+  ConsumerArg *carg = (ConsumerArg*)arg;
+
+  bool gpuMode = false;
+
+  int devCount = cv::gpu::getCudaEnabledDeviceCount();
+  if (carg->num < devCount) {
+    cv::gpu::setDevice(carg->num);
+    gpuMode = true;
+  }
 
   while(isRunning) {
     uv_mutex_lock(&req_mutex);
+    // キューにリクエストがくるか、終了通知がくるまで待つ
     while(ngx_queue_empty(&req_queue) && isRunning) {
-      uv_cond_wait(&full, &req_mutex);
+      uv_cond_wait(&requestNotification, &req_mutex);
     }
+    // 終了通知がきたらループを抜ける
     if(ngx_queue_empty(&req_queue) || !isRunning) {
       uv_mutex_unlock(&req_mutex);
       break;
     }
 
+    // リクエストをキューから取得
     ngx_queue_t *q;
-    request_buffer *buf;
+    RequestBuffer *req_buf;
     assert(!ngx_queue_empty(&req_queue));
     q = ngx_queue_last(&req_queue);
     ngx_queue_remove(q);
- 
-    buf = ngx_queue_data(q, request_buffer, queue);
-    string expect_path = string(buf->expect_path);
-    string target_path = string(buf->target_path);
-
+    req_buf = ngx_queue_data(q, RequestBuffer, queue);
+    string expect_image = string(req_buf->expect_image);
+    string target_image = string(req_buf->target_image);
     uv_mutex_unlock(&req_mutex);
 
-
+    // OpticalFlowを実行
     cv::Mat *flowx = new cv::Mat();
     cv::Mat *flowy = new cv::Mat();
-    cout << "opticalflow: " << expect_path << ":" << target_path << endl;
-    float t = calc_opticalflow(expect_path, target_path, false, *flowx, *flowy);
+    float t = calcOpticalFlow(expect_image, target_image, gpuMode, *flowx, *flowy);
 
-cout << "finish opticalflow " << t << endl;
-
-    free(buf);
-    
+    // 解析結果をレスポンスキューに入れる
     uv_mutex_lock(&res_mutex);
-    response_buffer* res_buf;
-    res_buf = (response_buffer*)malloc(sizeof(response_buffer));
+    ResponseBuffer* res_buf;
+    res_buf = new ResponseBuffer();
     ngx_queue_init(&res_buf->queue);
     res_buf->flowx = flowx;
     res_buf->flowy = flowy;
+    res_buf->time = t;
+    strcpy(res_buf->expect_image, req_buf->expect_image);
+    strcpy(res_buf->target_image, req_buf->target_image);
     ngx_queue_insert_tail(&res_queue, &res_buf->queue);
-    uv_cond_signal(&empty);
+    uv_cond_signal(&responseNotification);
     uv_mutex_unlock(&res_mutex);
 
-    finished_requests++;
+    delete req_buf;
   }
   cout << "finish consumer"  << carg->num << endl;
 }
  
-int consprod(const string expect_path, const string target_path, const double threshold, const int span, Local<Function> &cb) {
-  int i;
-  uv_thread_t cthreads[MAX_CONSUMERS];
-  uv_thread_t pthread;
+int dispatch(const string expect_path, const string target_path, const double threshold, const int span, Local<Function> &cb) {
 
-request_number = 0;
-finished_requests = 0;
-isRunning = true;
- 
   cout << "device count: " << cv::gpu::getCudaEnabledDeviceCount() << endl;
   fprintf(stdout, "=== start consumer-producer test ===\n");
+
+  request_count = 0;
+  isRunning = true;
+
   ngx_queue_init(&req_queue);
   ngx_queue_init(&res_queue);
-
   assert(0 == uv_mutex_init(&req_mutex));
   assert(0 == uv_mutex_init(&res_mutex));
-  assert(0 == uv_cond_init(&empty));
-  assert(0 == uv_cond_init(&full));
- 
-  for(i = 0; i < MAX_CONSUMERS; i++) {
-    consumer_arg *carg = new consumer_arg();
+  assert(0 == uv_cond_init(&responseNotification));
+  assert(0 == uv_cond_init(&requestNotification));
+
+  // ConsumerThreadの生成
+  uv_thread_t cthreads[MAX_CONSUMERS];
+  for(int i = 0; i < MAX_CONSUMERS; i++) {
+    ConsumerArg *carg = new ConsumerArg();
     carg->num = i;
-    assert(0 == uv_thread_create(&cthreads[i], consumer, (void*)carg));
+    assert(0 == uv_thread_create(&cthreads[i], consumerThread, (void*)carg));
   }
- 
-  producer_arg parg;
+
+  // ProducerThreadの生成
+  uv_thread_t pthread;
+  ProducerArg parg;
   parg.expect_path = expect_path;
   parg.target_path = target_path;
+  assert(0 == uv_thread_create(&pthread, producerThread, (void*)&parg));
 
-  assert(0 == uv_thread_create(&pthread, producer, (void*)&parg));
+  // ProducerThreadが完了するまで待つ
   assert(0 == uv_thread_join(&pthread));
 
-
-  int push_count = 0;
-  cout << "request number : " << request_number << endl;
-  while(request_number != push_count){
-    while(ngx_queue_empty(&res_queue)) {
-      uv_cond_wait(&empty, &res_mutex);
+  int finished_count = 0;
+  cout << "request count : " << request_count << endl;
+  // 画像比較を依頼した数と処理した数が一致するまで繰り返す
+  while (request_count != finished_count) {
+    while (ngx_queue_empty(&res_queue)) {
+      uv_cond_wait(&responseNotification, &res_mutex);
     }
-    push_count++;
-    cout << "pop!!" << endl;
+    finished_count++;
 
+    // キューからレスポンスを取得
     ngx_queue_t *q;
-    response_buffer *buf;
+    ResponseBuffer *res_buf;
     assert(!ngx_queue_empty(&res_queue));
     q = ngx_queue_last(&res_queue);
     ngx_queue_remove(q);
- 
-    buf = ngx_queue_data(q, response_buffer, queue);
-    Local<Array> results = Array::New();
-    copyToNode(buf->flowx, buf->flowy, threshold, span, results);
+    res_buf = ngx_queue_data(q, ResponseBuffer, queue);
+    string expect_image = string(res_buf->expect_image);
+    string target_image = string(res_buf->target_image);
 
+    Local<Object> result = Object::New();
+    createResult(
+      expect_image, target_image,
+      res_buf->flowx, res_buf->flowy,
+      threshold, span,
+      res_buf->time,
+      result);
+
+    // 結果をコールバック
     const unsigned argc = 1;
-    Local<Value> argv[argc] = { Local<Value>::New(results) };
+    Local<Value> argv[argc] = { Local<Value>::New(result) };
     cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
-    delete buf->flowx;
-    delete buf->flowy;
-    free(buf);
+    delete res_buf->flowx;
+    delete res_buf->flowy;
+    delete res_buf;
   }
 
-
+  // ConsumerThreadに完了を通知して、終了するまで待つ
   isRunning = false;
-
-  uv_cond_broadcast(&full);
-
+  uv_cond_broadcast(&requestNotification);
   for(i = 0; i < MAX_CONSUMERS; i++) {
     assert(0 == uv_thread_join(&cthreads[i]));
   }
 
-  
-  uv_cond_destroy(&empty);
-  uv_cond_destroy(&full);
+  uv_cond_destroy(&responseNotification);
+  uv_cond_destroy(&requestNotification);
   uv_mutex_destroy(&req_mutex);
   uv_mutex_destroy(&res_mutex);
  
   fprintf(stdout, "=== end consumer-producer test ===\n");
+
   return 0;
 }

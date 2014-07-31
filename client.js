@@ -5,8 +5,8 @@ socket.on('message', function(data) {
 });
 
 socket.send({
-  'expect_image': 'customjsp1.png',
-  'target_image': 'customjsp2.png',
+  'expect_path': 'customjsp1.png',
+  'target_path': 'customjsp2.png',
   'threshold': 5,
   'span': 10
 });
