@@ -19,7 +19,6 @@ bool traverse(const string filepath, const int maxdepth, int curdepth, vector<st
     DIR*            dr;
     struct dirent*  entry;
     struct stat     st;
-    struct tm*      calendertime;
     string            curdir;
     string            curpath;
     bool            canread = true;
