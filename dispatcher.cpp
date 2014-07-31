@@ -71,47 +71,47 @@ static void createResult(
   const float time,
   const Local<Object> &result) {
 
-	Persistent<String> time_symbol = NODE_PSYMBOL("time");
-	Persistent<String> status_symbol = NODE_PSYMBOL("status");
+  Persistent<String> time_symbol = NODE_PSYMBOL("time");
+  Persistent<String> status_symbol = NODE_PSYMBOL("status");
 
-	Persistent<String> span_symbol = NODE_PSYMBOL("span");
-	Persistent<String> threshold_symbol = NODE_PSYMBOL("threshold");
-	Persistent<String> expect_symbol = NODE_PSYMBOL("expect_image");
-	Persistent<String> target_symbol = NODE_PSYMBOL("target_image");
+  Persistent<String> span_symbol = NODE_PSYMBOL("span");
+  Persistent<String> threshold_symbol = NODE_PSYMBOL("threshold");
+  Persistent<String> expect_symbol = NODE_PSYMBOL("expect_image");
+  Persistent<String> target_symbol = NODE_PSYMBOL("target_image");
 
-	Persistent<String> vector_symbol = NODE_PSYMBOL("vector");
-	Persistent<String> x_symbol = NODE_PSYMBOL("x");
-	Persistent<String> y_symbol = NODE_PSYMBOL("y");
-	Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
-	Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
+  Persistent<String> vector_symbol = NODE_PSYMBOL("vector");
+  Persistent<String> x_symbol = NODE_PSYMBOL("x");
+  Persistent<String> y_symbol = NODE_PSYMBOL("y");
+  Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
+  Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
 
-	result->Set(span_symbol, Integer::New(time));
-	result->Set(threshold_symbol, Number::New(time));
-	result->Set(expect_symbol, String::New(expect_image.c_str()));
-	result->Set(target_symbol, String::New(target_image.c_str()));
+  result->Set(span_symbol, Integer::New(time));
+  result->Set(threshold_symbol, Number::New(time));
+  result->Set(expect_symbol, String::New(expect_image.c_str()));
+  result->Set(target_symbol, String::New(target_image.c_str()));
 
-	result->Set(time_symbol, Number::New(time));
+  result->Set(time_symbol, Number::New(time));
 
   Local<Array> vectors = Array::New();
-	int vector_len = 0;
-	for (int y = 0; y < flowx->rows; ++y) {
-		if ( y % span != 0 ) continue;
-		for (int x = 0; x < flowx->cols; ++x) {
-			if ( x % span != 0 ) continue;
-			float dx = flowx->at<float>(y,x);
-			float dy = flowy->at<float>(y,x);
-			float len = (dx*dx) + (dy*dy);
-			if (len > (threshold*threshold)) {
-				Local<Object> v = Object::New();
-				v->Set(x_symbol, Integer::New(x));
-				v->Set(y_symbol, Integer::New(y));
-				v->Set(dx_symbol, Number::New(dx));
-				v->Set(dy_symbol, Number::New(dy));
-				vectors->Set(vector_len++, v);
-			}
-		}
-	}
-	result->Set(vector_symbol, vectors);
+  int vector_len = 0;
+  for (int y = 0; y < flowx->rows; ++y) {
+    if ( y % span != 0 ) continue;
+    for (int x = 0; x < flowx->cols; ++x) {
+      if ( x % span != 0 ) continue;
+      float dx = flowx->at<float>(y,x);
+      float dy = flowy->at<float>(y,x);
+      float len = (dx*dx) + (dy*dy);
+      if (len > (threshold*threshold)) {
+        Local<Object> v = Object::New();
+        v->Set(x_symbol, Integer::New(x));
+        v->Set(y_symbol, Integer::New(y));
+        v->Set(dx_symbol, Number::New(dx));
+        v->Set(dy_symbol, Number::New(dy));
+        vectors->Set(vector_len++, v);
+      }
+    }
+  }
+  result->Set(vector_symbol, vectors);
 }
 
 // 指定されたディレクトリをトラバースして、画像比較処理の依頼をおこなう

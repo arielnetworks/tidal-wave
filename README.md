@@ -6,7 +6,7 @@
 
 ## なにするもの？
 
-![処理の流れ](flow.png)
+![flow](flow.png)
 
 ## 必要なもの
 
@@ -43,23 +43,27 @@ sudo service lightdm stop
 
 * cuda toolkitのインストール
     * 色々質問されるけど、基本全部y。ディレクトリはデフォルトのままで。
+    
 ~~~
 chmod +x cuda_6.0.37_linux_64.run
 sudo ./cuda_6.0.37_linux_64.run
 ~~~
 
 * パスを通す
+
 ~~~
 export PATH includes="/usr/local/cuda-6.0/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda-6.0/lib64"
 ~~~
 
 * Xを再開
+
 ~~~
 sudo service lightdm start
 ~~~
 
 * cudaのサンプルを動かしてみる
+
 ~~~
 cd ~/NVIDIA_CUDA-6.0_Samples
 cd 1_Utilities/deviceQuery
@@ -124,6 +128,7 @@ sudo ln -s /usr/lib/nvidia-current/libnvcuvid.so /usr/lib/libnvcuvid.so
     * http://opencv.org/downloads.html
     * opencv-2.4.9.zip
 * ビルド
+
 ~~~
 unzip opencv-2.4.9.zip
 cd opencv-2.4.9
@@ -133,6 +138,7 @@ sudo make install
 ~~~
 
 * サンプルを動かしてみる
+
 ~~~
 cp /usr/local/share/OpenCV/samples/gpu/farneback_optical_flow.cpp ./
 g++ farneback_optical_flow.cpp `/usr/bin/pkg-config --cflags --libs opencv` -L/usr/local/cuda-6.0/lib64
