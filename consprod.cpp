@@ -17,9 +17,7 @@
 #include <v8.h>
 #include "uv.h"
 
- 
 #define MAX_CONSUMERS 3
-#define MAX_LOOPS 1
 
 using namespace v8;
 using namespace std;
@@ -127,6 +125,8 @@ static void producer(void* arg) {
 static void consumer(void* arg) {
   consumer_arg *carg = (consumer_arg*)arg;
 
+  //cv::gpu::setDevice(carg->num);
+
   while(isRunning) {
     uv_mutex_lock(&req_mutex);
     while(ngx_queue_empty(&req_queue) && isRunning) {
@@ -183,6 +183,7 @@ request_number = 0;
 finished_requests = 0;
 isRunning = true;
  
+  cout << "device count: " << cv::gpu::getCudaEnabledDeviceCount() << endl;
   fprintf(stdout, "=== start consumer-producer test ===\n");
   ngx_queue_init(&req_queue);
   ngx_queue_init(&res_queue);

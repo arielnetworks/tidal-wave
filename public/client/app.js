@@ -10,8 +10,8 @@ angular.module('app', [])
     });
 
     socket.send({
-      'expect_image': './public/images',
-      'target_image': './public/images2',
+      'expect_image': '/home/ikezoe_a/test_images/widget_common_normal',
+      'target_image': '/home/ikezoe_a/test_images/widget_common_normal_scratch',
       'threshold': 5,
       'span': 10
     });
