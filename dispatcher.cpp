@@ -279,7 +279,7 @@ int dispatch(const string expect_path, const string target_path, const double th
   // ConsumerThreadに完了を通知して、終了するまで待つ
   isRunning = false;
   uv_cond_broadcast(&requestNotification);
-  for(i = 0; i < MAX_CONSUMERS; i++) {
+  for(int i = 0; i < MAX_CONSUMERS; i++) {
     assert(0 == uv_thread_join(&cthreads[i]));
   }
 

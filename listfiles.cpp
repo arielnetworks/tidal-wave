@@ -39,7 +39,7 @@ bool listFiles(const string filepath, int curdepth, vector<string> &list) {
 					if (strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0) {
 						continue;
 					}
-					canread = traverse( curpath, curdepth, list );
+					canread = listFiles(curpath, curdepth, list);
 					if (!canread) {
 						return canread;
 					}

@@ -30,7 +30,7 @@ Handle<Value> Method(const Arguments& args) {
     ThrowException(Exception::TypeError(String::New("Wrong arguments")));
     return scope.Close(Undefined());
   }
-  if (!args[3]->IsInteger()) {
+  if (!args[3]->IsNumber()) {
     ThrowException(Exception::TypeError(String::New("Wrong arguments")));
     return scope.Close(Undefined());
   }
