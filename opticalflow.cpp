@@ -22,6 +22,10 @@ float calcOpticalFlow(string expectImgPath, string targetImgPath, bool gpuMode, 
   if (targetImg.empty()) cout << "Can't open '" << targetImgPath << "'\n";
   if (expectImg.empty() || targetImg.empty()) return -1;
 
+  if (abs(expectImg.rows - targetImg.rows) > 5 || abs(expectImg.cols - targetImg.cols) > 5) {
+    return -1;
+  }
+
   if (expectImg.rows != targetImg.rows || expectImg.cols != targetImg.cols) {
     Mat resizedTargetImg(expectImg.rows, expectImg.cols, expectImg.type());
     cv::resize(targetImg, resizedTargetImg, resizedTargetImg.size(), cv::INTER_NEAREST);

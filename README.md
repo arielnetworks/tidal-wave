@@ -6,7 +6,7 @@
 
 ## なにするもの？
 
-![flow](flow.png)
+![処理の流れ](http://legion.ariel-networks.com/gitbucket/leviathan/tidal-wave/blob/master/flow.png?raw=true)
 
 ## 必要なもの
 
@@ -173,19 +173,46 @@ node index.js
 
 ### リクエスト
 
-* expect_path
-* target_path
-* threshold
-* span
+* expect_path: 期待画像のディレクトリ
+* target_path: 対象画像のディレクトリ
+* threshold: しきい値(3〜5くらいが最適)
+* span: ベクトルを取得する間隔
+
+~~~
+{
+  'expect_path': 'public/images',
+  'target_path': 'public/images2',
+  'threshold': 5,
+  'span': 10
+});
+
+~~~
 
 ### レスポンス
 
-* キャプチャID 
-* キャプチャタイトル
-* 差分データ詳細
-* 差分データの span, threshold などこちらから送った内容 （画像サイズ自体が大きく異なった場合、なし）
-* 画像への公開パス（expected, target の2つ）
-* 処理にかかった時間とか？
-* ステータス（OK, SUSPICIOUS, 画像サイズ自体違うから絶対NG の3つ）
+* vector: ベクトルデータ
+    * x: X座標
+    * y: Y座標
+    * dx: X方向の移動量
+    * dy: Y方向の移動量
+* expect_image: 期待画像
+* target_image: 対象画像
+* span: ベクトルを取得する間隔
+* threshold: しきい値
+* time: 処理にかかった時間
+* status: ステータス（OK, SUSPICIOUS,ERRORの3つ）
 
+~~~
+vector[
+  { x: 60, y: 1160, dx: -0.7929320931434631, dy: 7.249414443969727 },
+  { x: 70, y: 1160, dx: 2.1631455421447754, dy: 7.150839328765869 },
+  { x: 80, y: 1160, dx: 3.28291392326355, dy: 6.485356330871582 }
+],
+expect image: public/images/customjsp2.png,
+target image: public/images2/customjsp2.png,
+span: 10
+threshold: 5
+time: 2.4183433055877686
+status: SUSPICIOUS
+~~~
 

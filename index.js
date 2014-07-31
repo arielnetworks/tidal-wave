@@ -22,8 +22,9 @@ socket.on('connection', function(client) {
       data.threshold ? data.threshold : 5,
       data.span ? data.span : 10,
       function(msg){
-        console.log(msg.length);
+        console.log(msg.vector.length);
         client.send(msg);
       });
+    client.disconnect();
   });
 });

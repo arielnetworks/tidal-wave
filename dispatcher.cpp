@@ -85,12 +85,13 @@ static void createResult(
   Persistent<String> dx_symbol = NODE_PSYMBOL("dx");
   Persistent<String> dy_symbol = NODE_PSYMBOL("dy");
 
-  result->Set(span_symbol, Integer::New(time));
-  result->Set(threshold_symbol, Number::New(time));
+  result->Set(span_symbol, Integer::New(span));
+  result->Set(threshold_symbol, Number::New(threshold));
   result->Set(expect_symbol, String::New(expect_image.c_str()));
   result->Set(target_symbol, String::New(target_image.c_str()));
 
   result->Set(time_symbol, Number::New(time));
+
 
   Local<Array> vectors = Array::New();
   int vector_len = 0;
@@ -112,6 +113,14 @@ static void createResult(
     }
   }
   result->Set(vector_symbol, vectors);
+
+  if (time < 0) {
+    result->Set(status_symbol, String::New("ERROR"));
+  } else if (vector_len == 0) {
+    result->Set(status_symbol, String::New("OK"));
+  } else {
+    result->Set(status_symbol, String::New("SUSPICIOUS"));
+  } 
 }
 
 // 指定されたディレクトリをトラバースして、画像比較処理の依頼をおこなう
