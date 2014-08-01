@@ -11,7 +11,9 @@
 
 <body>
 <div ng-controller="myController">
-  <flow height="1169" width="960" data="data"/>
+  <div ng-repeat="item in items">
+    <flow data="item"/>
+  </div>
 </div>
 </body>
 
