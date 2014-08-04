@@ -40,6 +40,10 @@ typedef struct {
   char expect_image[255];
   char target_image[255];
   float time;
+
+  OpticalFlow *opt;
+  double threshold;
+  int span;
 } ResponseBuffer;
 
 typedef struct {
@@ -57,78 +61,21 @@ typedef struct {
 static ngx_queue_t req_queue;
 static ngx_queue_t res_queue;
 
+static uv_async_t async;
+
 static uv_mutex_t req_mutex;
 static uv_mutex_t res_mutex;
 static uv_cond_t responseNotification;
 static uv_cond_t requestNotification;
 
+static uv_mutex_t msg_mutex;
+static std::vector<ResponseBuffer*> *msg_buffer;
+
 static volatile int request_count = 0;
+static volatile int callback_count = 0;
 static volatile bool isRunning = true;
 
 float calcOpticalFlow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
-
-
-// 指定された2つのディレクトリの中からパスが一致する画像の組を作って、画像比較処理の依頼をおこなう
-static void producerThread(void* arg) {
-  ProducerArg *parg = (ProducerArg*)arg;
-
-  vector<string> expect_files;
-  vector<string> target_files;
-
-  listFiles(parg->expect_path, 1, expect_files);
-  listFiles(parg->target_path, 1, target_files);
-
-  for(vector<string>::iterator tit = target_files.begin(); tit != target_files.end(); ++tit) {
-    for(vector<string>::iterator eit = expect_files.begin(); eit != expect_files.end(); ++eit) {
-      string expect_image = (*eit).substr(parg->expect_path.length()+1);
-      string target_image = (*tit).substr(parg->target_path.length()+1);
-      // expect_pathとtarget_pathの中に同じ名前のファイルが見つかったら処理を依頼
-      if (target_image == expect_image) {
-        uv_mutex_lock(&req_mutex);
-        RequestBuffer* req_buf;
-        req_buf = new RequestBuffer();
-        ngx_queue_init(&req_buf->queue);
-        strcpy(req_buf->expect_image, (*eit).c_str());
-        strcpy(req_buf->target_image, (*tit).c_str());
-        ngx_queue_insert_tail(&req_queue, &req_buf->queue);
-        uv_mutex_unlock(&req_mutex);
-        uv_cond_signal(&requestNotification);
-        request_count++;
-        break;
-      }
-    }
-  }
-
-  int finished_count = 0;
-  cout << "request count : " << request_count << endl;
-  // 画像比較を依頼した数と処理した数が一致するまで繰り返す
-  while (request_count != finished_count) {
-    while (ngx_queue_empty(&res_queue)) {
-      uv_cond_wait(&responseNotification, &res_mutex);
-    }
-    finished_count++;
-
-    // キューからレスポンスを取得
-    ngx_queue_t *q;
-    ResponseBuffer *res_buf;
-    assert(!ngx_queue_empty(&res_queue));
-    q = ngx_queue_last(&res_queue);
-    ngx_queue_remove(q);
-    res_buf = ngx_queue_data(q, ResponseBuffer, queue);
-    string expect_image = string(res_buf->expect_image);
-    string target_image = string(res_buf->target_image);
-
-
-    parg->opt->Emit(expect_image, target_image, res_buf->flowx, res_buf->flowy, parg->threshold, parg->span, res_buf->time);
-
-
-    delete res_buf->flowx;
-    delete res_buf->flowy;
-    delete res_buf;
-  }
-
-  cout << "finish producer" << endl;
-}
 
 // キューから依頼を取得して、OpticalFlow処理を実行する
 static void consumerThread(void* arg) {
@@ -186,29 +133,14 @@ static void consumerThread(void* arg) {
 
     delete req_buf;
   }
-  delete carg;
   cout << "finish consumer"  << carg->num << endl;
+  delete carg;
 }
- 
-int dispatch(
-  const string expect_path,
-  const string target_path,
-  const double threshold,
-  const int span, 
-  OpticalFlow *opt
-  ){
-  cout << "device count: " << cv::gpu::getCudaEnabledDeviceCount() << endl;
-  fprintf(stdout, "=== start consumer-producer test ===\n");
 
-  request_count = 0;
-  isRunning = true;
 
-  ngx_queue_init(&req_queue);
-  ngx_queue_init(&res_queue);
-  assert(0 == uv_mutex_init(&req_mutex));
-  assert(0 == uv_mutex_init(&res_mutex));
-  assert(0 == uv_cond_init(&responseNotification));
-  assert(0 == uv_cond_init(&requestNotification));
+// 指定された2つのディレクトリの中からパスが一致する画像の組を作って、画像比較処理の依頼をおこなう
+void producerThread(uv_work_t* req) {
+
 
   // ConsumerThreadの生成
   uv_thread_t cthreads[MAX_CONSUMERS];
@@ -218,18 +150,63 @@ int dispatch(
     assert(0 == uv_thread_create(&cthreads[i], consumerThread, (void*)carg));
   }
 
-  // ProducerThreadの生成
-  uv_thread_t pthread;
-  ProducerArg parg;
-  parg.expect_path = expect_path;
-  parg.target_path = target_path;
-  parg.opt = opt;
-  parg.threshold = threshold;
-  parg.span = span;
-  assert(0 == uv_thread_create(&pthread, producerThread, (void*)&parg));
 
-  // ProducerThreadが完了するまで待つ
-  assert(0 == uv_thread_join(&pthread));
+  ProducerArg *parg = (ProducerArg*)req->data;
+
+  vector<string> expect_files;
+  vector<string> target_files;
+
+  listFiles(parg->expect_path, 1, expect_files);
+  listFiles(parg->target_path, 1, target_files);
+
+  for(vector<string>::iterator tit = target_files.begin(); tit != target_files.end(); ++tit) {
+    for(vector<string>::iterator eit = expect_files.begin(); eit != expect_files.end(); ++eit) {
+      string expect_image = (*eit).substr(parg->expect_path.length()+1);
+      string target_image = (*tit).substr(parg->target_path.length()+1);
+      // expect_pathとtarget_pathの中に同じ名前のファイルが見つかったら処理を依頼
+      if (target_image == expect_image) {
+        uv_mutex_lock(&req_mutex);
+        RequestBuffer* req_buf;
+        req_buf = new RequestBuffer();
+        ngx_queue_init(&req_buf->queue);
+        strcpy(req_buf->expect_image, (*eit).c_str());
+        strcpy(req_buf->target_image, (*tit).c_str());
+        ngx_queue_insert_tail(&req_queue, &req_buf->queue);
+        uv_mutex_unlock(&req_mutex);
+        uv_cond_signal(&requestNotification);
+        request_count++;
+        break;
+      }
+    }
+  }
+
+  int finished_count = 0;
+  cout << "request count : " << request_count << endl;
+  // 画像比較を依頼した数と処理した数が一致するまで繰り返す
+  while (request_count != finished_count) {
+    while (ngx_queue_empty(&res_queue)) {
+      uv_cond_wait(&responseNotification, &res_mutex);
+    }
+    finished_count++;
+
+    // キューからレスポンスを取得
+    ngx_queue_t *q;
+    ResponseBuffer *res_buf;
+    assert(!ngx_queue_empty(&res_queue));
+    q = ngx_queue_last(&res_queue);
+    ngx_queue_remove(q);
+    res_buf = ngx_queue_data(q, ResponseBuffer, queue);
+    res_buf->opt = parg->opt;
+    res_buf->threshold = parg->threshold;
+    res_buf->span = parg->span;
+
+    uv_mutex_lock(&msg_mutex);
+    msg_buffer->push_back(res_buf);
+    uv_mutex_unlock(&msg_mutex);
+    cout << "async_send: " << finished_count << endl;
+    uv_async_send(&async);
+
+  }
 
   // ConsumerThreadに完了を通知して、終了するまで待つ
   isRunning = false;
@@ -238,10 +215,125 @@ int dispatch(
     assert(0 == uv_thread_join(&cthreads[i]));
   }
 
+  while (true) {
+    cout << "after? " << request_count << ":" << callback_count << endl;
+    uv_mutex_lock(&msg_mutex);
+    if (request_count == callback_count) {
+      uv_mutex_unlock(&msg_mutex);
+      break;
+    } 
+    uv_mutex_unlock(&msg_mutex);
+    sleep(1);
+  }
+//  delete req;
+  cout << "finish producer" << endl;
+}
+
+void sendCallback(uv_async_t *handle, int status) {
+  HandleScope scope;
+  cout << "callback!!" << endl;
+
+  uv_mutex_lock(&msg_mutex);
+  for(vector<ResponseBuffer*>::iterator it = msg_buffer->begin(); it != msg_buffer->end(); it++) {
+    cout << "callback1" << endl;
+    ResponseBuffer *res_buf = *it;
+
+    string expect_image = string(res_buf->expect_image);
+    string target_image = string(res_buf->target_image);
+    cout << "callback2" << endl;
+
+    res_buf->opt->Emit(
+      expect_image, target_image, 
+      res_buf->flowx, res_buf->flowy, 
+      res_buf->threshold, res_buf->span, 
+      res_buf->time);
+
+    cout << "callback3" << endl;
+    delete res_buf->flowx;
+    delete res_buf->flowy;
+    delete res_buf;
+    cout << "callback end!! " << callback_count << endl;
+    callback_count++;
+  }
+  msg_buffer->clear();
+  uv_mutex_unlock(&msg_mutex);
+  cout << "callback end!!" << endl;
+
+};
+
+void after(uv_work_t* req, int status) {
+/*
+  while (true) {
+    cout << "after? " << request_count << ":" << callback_count << endl;
+    uv_mutex_lock(&msg_mutex);
+    if (request_count == callback_count) {
+      uv_mutex_unlock(&msg_mutex);
+      break;
+    } 
+    uv_mutex_unlock(&msg_mutex);
+    sleep(1);
+  }
+*/
+  cout << "after ok.." << endl;
+
+  cout << "after ok..1" << endl;
   uv_cond_destroy(&responseNotification);
+  cout << "after ok..1" << endl;
   uv_cond_destroy(&requestNotification);
+  cout << "after ok..1" << endl;
   uv_mutex_destroy(&req_mutex);
+  cout << "after ok..1" << endl;
   uv_mutex_destroy(&res_mutex);
+  cout << "after ok..1" << endl;
+  uv_mutex_destroy(&msg_mutex);
+  cout << "after ok..1" << endl;
+  uv_close((uv_handle_t*) &async, NULL);
+  cout << "after ok..1" << endl;
+  delete msg_buffer;
+  cout << "after ok..1" << endl;
+
+  cout << "after ok!!" << endl;
+}
+
+
+ 
+int dispatch(
+  const string expect_path,
+  const string target_path,
+  const double threshold,
+  const int span, 
+  OpticalFlow *opt
+){
+  cout << "device count: " << cv::gpu::getCudaEnabledDeviceCount() << endl;
+  fprintf(stdout, "=== start consumer-producer test ===\n");
+
+  ngx_queue_init(&req_queue);
+  ngx_queue_init(&res_queue);
+  assert(0 == uv_mutex_init(&req_mutex));
+  assert(0 == uv_mutex_init(&res_mutex));
+  assert(0 == uv_mutex_init(&msg_mutex));
+  assert(0 == uv_cond_init(&responseNotification));
+  assert(0 == uv_cond_init(&requestNotification));
+  msg_buffer = new vector<ResponseBuffer*>();
+
+  request_count = 0;
+  callback_count = 0;
+  isRunning = true;
+
+
+  // ProducerThreadの生成
+  ProducerArg *parg = new ProducerArg();
+  parg->expect_path = expect_path;
+  parg->target_path = target_path;
+  parg->opt = opt;
+  parg->threshold = threshold;
+  parg->span = span;
+
+  uv_work_t *req = new uv_work_t();
+  req->data = parg;
+  uv_async_init(uv_default_loop(), &async, sendCallback);
+  uv_queue_work(uv_default_loop(), req, producerThread, after);
+
  
   fprintf(stdout, "=== end consumer-producer test ===\n");
 

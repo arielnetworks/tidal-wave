@@ -2,7 +2,7 @@ angular.module('app', [])
   .controller('myController', ['$scope', function ($scope) {
 
     $scope.items = [];
-    var socket = io('ws://10.0.2.90:5000');
+    var socket = io('ws://10.0.2.90:5001');
     socket.on('message', function(msg) {
       $scope.$apply(function(){
         if (msg.status == 'SUSPICIOUS') {

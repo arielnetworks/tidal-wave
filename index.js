@@ -6,7 +6,7 @@ var express = require('express'),
 var OpticalFlow = require('./opticalflow.js');
 
 var server = http.createServer(app);
-server.listen(5000);
+server.listen(5001);
 
 app.use(express.static(__dirname + '/public'));
 
@@ -31,6 +31,6 @@ socket.on('connection', function(client) {
       data.target_path,
       data.threshold ? data.threshold : 5,
       data.span ? data.span : 10
-      );
+    );
   });
 });

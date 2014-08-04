@@ -74,6 +74,14 @@ static void createResult(
     }
   }
   result->Set(vector_symbol, vectors);
+
+  if (time < 0) {
+    result->Set(status_symbol, String::New("ERROR"));
+  } else if (vector_len == 0) {
+    result->Set(status_symbol, String::New("OK"));
+  } else {
+    result->Set(status_symbol, String::New("SUSPICIOUS"));
+  } 
 }
 
 void OpticalFlow::Init(Handle<Object>& target) {
@@ -145,10 +153,16 @@ void OpticalFlow::Emit(
     const double threshold, const int span,
     const float time
   ) {
-    HandleScope scope;
-    Local<Value> emit_v = handle_->Get(emit_symbol);
-    Local<Function> emit = emit_v.As<Function>();
+cout << "Emit1" << endl;
 
+cout << "Emit1" << endl;
+    HandleScope scope;
+cout << "Emit1.1" << endl;
+    //Local<Value> emit_v = handle_->Get(emit_symbol);
+cout << "Emit1.2" << endl;
+    //Local<Function> emit = emit_v.As<Function>();
+
+cout << "Emit2" << endl;
     Local<Object> result = Object::New();
     createResult(
       expect_image, target_image,
@@ -156,14 +170,23 @@ void OpticalFlow::Emit(
       threshold, span,
       time,
       result);
-
+cout << "Emit3" << endl;
     // 結果をコールバック
     const unsigned argc = 2;
     Local<Value> argv[argc] = { 
       String::New("message"),
       Local<Value>::New(result) 
     };
+    node::MakeCallback(this->handle_, "emit", argc, argv);
+//    TryCatch tc;
+cout << "Emit4" << endl;
+/*
     emit->Call(this->handle_, argc, argv);
+    if (tc.HasCaught()) {
+      FatalException(tc);
+    }
+*/
+cout << "Emit5" << endl;
   };
 
 void init(Handle<Object> target) {
