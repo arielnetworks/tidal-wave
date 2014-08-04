@@ -3,12 +3,13 @@ var express = require('express'),
     io = require('socket.io')
     app = express();
 
+var OpticalFlow = require('./opticalflow.js');
+
 var server = http.createServer(app);
 server.listen(5000);
 
 app.use(express.static(__dirname + '/public'));
 
-var opticalflow = require('./build/Release/opticalflow').opticalflow;
 
 var socket = io.listen(server);
 
@@ -16,15 +17,20 @@ socket.on('connection', function(client) {
   console.log('connection');
   client.on('message', function(data) {
     console.log(data);
-    opticalflow(
+
+    var opticalflow = new OpticalFlow();
+    opticalflow.on('message', function(msg) {
+      console.log(msg.vector.length);
+      client.send(msg);
+    });
+    opticalflow.on('finish', function() {
+      client.disconnect();
+    });
+    opticalflow.calc(
       data.expect_path,
       data.target_path,
       data.threshold ? data.threshold : 5,
-      data.span ? data.span : 10,
-      function(msg){
-        console.log(msg.vector.length);
-        client.send(msg);
-      });
-    client.disconnect();
+      data.span ? data.span : 10
+      );
   });
 });

@@ -1,6 +1,9 @@
-var opticalflow = require('./build/Release/opticalflow').opticalflow;
+var OpticalFlow = require('./opticalflow.js');
 
-opticalflow("public/images", "public/images2", 10, 5, function(data){
+
+var opticalflow = new OpticalFlow();
+
+opticalflow.on('message', function(data) {
   console.log('vector length: ' + data.vector.length);
   console.log('expect image: ' + data.expect_image);
   console.log('target image: ' + data.target_image);
@@ -10,3 +13,7 @@ opticalflow("public/images", "public/images2", 10, 5, function(data){
   console.log('status: ' + data.status);
 });
 
+opticalflow.on('finish', function() {
+  console.log('finish');
+});
+opticalflow.calc("public/images", "public/images2", 10, 5);
