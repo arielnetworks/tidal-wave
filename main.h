@@ -16,6 +16,7 @@ public:
     const double threshold, const int span,
     const float time
   );
+  void Finish();
 private:
   OpticalFlow();
   ~OpticalFlow();

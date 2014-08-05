@@ -71,7 +71,6 @@ static uv_cond_t requestNotification;
 static uv_mutex_t msg_mutex;
 static std::vector<ResponseBuffer*> *msg_buffer;
 
-static volatile int request_count = 0;
 static volatile int callback_count = 0;
 static volatile bool isRunning = true;
 
@@ -159,6 +158,8 @@ void producerThread(uv_work_t* req) {
   listFiles(parg->expect_path, 1, expect_files);
   listFiles(parg->target_path, 1, target_files);
 
+  int request_count = 0;
+
   for(vector<string>::iterator tit = target_files.begin(); tit != target_files.end(); ++tit) {
     for(vector<string>::iterator eit = expect_files.begin(); eit != expect_files.end(); ++eit) {
       string expect_image = (*eit).substr(parg->expect_path.length()+1);
@@ -200,12 +201,13 @@ void producerThread(uv_work_t* req) {
     res_buf->threshold = parg->threshold;
     res_buf->span = parg->span;
 
+    // sendCallback向けにデータを詰める
     uv_mutex_lock(&msg_mutex);
     msg_buffer->push_back(res_buf);
     uv_mutex_unlock(&msg_mutex);
-    cout << "async_send: " << finished_count << endl;
-    uv_async_send(&async);
 
+    // sendCallback処理を実行してもらうように通知する
+    uv_async_send(&async);
   }
 
   // ConsumerThreadに完了を通知して、終了するまで待つ
@@ -215,8 +217,9 @@ void producerThread(uv_work_t* req) {
     assert(0 == uv_thread_join(&cthreads[i]));
   }
 
+  // すべてのsendCallback処理が完了するまで待つ。
+  // producerThreadが完了するとすぐにafterが呼ばれて、mutexとかいろいろ解放されてしまうので。
   while (true) {
-    cout << "after? " << request_count << ":" << callback_count << endl;
     uv_mutex_lock(&msg_mutex);
     if (request_count == callback_count) {
       uv_mutex_unlock(&msg_mutex);
@@ -225,22 +228,21 @@ void producerThread(uv_work_t* req) {
     uv_mutex_unlock(&msg_mutex);
     sleep(1);
   }
-//  delete req;
+  //delete req;
   cout << "finish producer" << endl;
 }
 
+// Node.js側のコールバック関数を呼び出してオプティカルフローの計算結果を通知する
+// uv_async_sendを複数回呼んでもsendCallbackは1回にまとめられることがあるので、msg_bufferで複数のデータをやりとり。
 void sendCallback(uv_async_t *handle, int status) {
   HandleScope scope;
-  cout << "callback!!" << endl;
 
   uv_mutex_lock(&msg_mutex);
   for(vector<ResponseBuffer*>::iterator it = msg_buffer->begin(); it != msg_buffer->end(); it++) {
-    cout << "callback1" << endl;
     ResponseBuffer *res_buf = *it;
 
     string expect_image = string(res_buf->expect_image);
     string target_image = string(res_buf->target_image);
-    cout << "callback2" << endl;
 
     res_buf->opt->Emit(
       expect_image, target_image, 
@@ -248,51 +250,30 @@ void sendCallback(uv_async_t *handle, int status) {
       res_buf->threshold, res_buf->span, 
       res_buf->time);
 
-    cout << "callback3" << endl;
     delete res_buf->flowx;
     delete res_buf->flowy;
     delete res_buf;
-    cout << "callback end!! " << callback_count << endl;
     callback_count++;
   }
   msg_buffer->clear();
   uv_mutex_unlock(&msg_mutex);
-  cout << "callback end!!" << endl;
 
 };
 
+// すべての処理が完了した時に呼び出される
 void after(uv_work_t* req, int status) {
-/*
-  while (true) {
-    cout << "after? " << request_count << ":" << callback_count << endl;
-    uv_mutex_lock(&msg_mutex);
-    if (request_count == callback_count) {
-      uv_mutex_unlock(&msg_mutex);
-      break;
-    } 
-    uv_mutex_unlock(&msg_mutex);
-    sleep(1);
-  }
-*/
-  cout << "after ok.." << endl;
 
-  cout << "after ok..1" << endl;
+  // Node.js側に終了のコールバック
+  ProducerArg *parg = (ProducerArg*)req->data;
+  parg->opt->Finish();
+
   uv_cond_destroy(&responseNotification);
-  cout << "after ok..1" << endl;
   uv_cond_destroy(&requestNotification);
-  cout << "after ok..1" << endl;
   uv_mutex_destroy(&req_mutex);
-  cout << "after ok..1" << endl;
   uv_mutex_destroy(&res_mutex);
-  cout << "after ok..1" << endl;
   uv_mutex_destroy(&msg_mutex);
-  cout << "after ok..1" << endl;
   uv_close((uv_handle_t*) &async, NULL);
-  cout << "after ok..1" << endl;
   delete msg_buffer;
-  cout << "after ok..1" << endl;
-
-  cout << "after ok!!" << endl;
 }
 
 
@@ -316,7 +297,6 @@ int dispatch(
   assert(0 == uv_cond_init(&requestNotification));
   msg_buffer = new vector<ResponseBuffer*>();
 
-  request_count = 0;
   callback_count = 0;
   isRunning = true;
 

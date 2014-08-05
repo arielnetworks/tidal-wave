@@ -12,19 +12,30 @@ app.use(express.static(__dirname + '/public'));
 
 
 var socket = io.listen(server);
+var opticalflow = new OpticalFlow();
+var busy = false;
 
 socket.on('connection', function(client) {
   console.log('connection');
+  if(busy) {
+    console.log("busy!!!!!!");
+    client.disconnect();
+    return;
+  }
+  busy = true;
+
   client.on('message', function(data) {
     console.log(data);
-
-    var opticalflow = new OpticalFlow();
-    opticalflow.on('message', function(msg) {
+    var onMessage = function(msg) {
       console.log(msg.vector.length);
       client.send(msg);
-    });
-    opticalflow.on('finish', function() {
+    };
+    opticalflow.on('message', onMessage);
+    opticalflow.once('finish', function() {
+      console.log("finish!!");
       client.disconnect();
+      busy = false;
+      opticalflow.removeListener('message', onMessage);
     });
     opticalflow.calc(
       data.expect_path,

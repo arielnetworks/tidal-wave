@@ -85,109 +85,102 @@ static void createResult(
 }
 
 void OpticalFlow::Init(Handle<Object>& target) {
-    Local<FunctionTemplate> clazz = FunctionTemplate::New(OpticalFlow::New);
-    clazz->SetClassName(String::NewSymbol("OpticalFlow"));
-    clazz->InstanceTemplate()->SetInternalFieldCount(1);
-    clazz->PrototypeTemplate()->Set(
-      String::NewSymbol("calc"),
-      FunctionTemplate::New(OpticalFlow::Calc)->GetFunction()
-    );
-    target->Set(String::NewSymbol("OpticalFlow"), clazz->GetFunction());
-  };
+  Local<FunctionTemplate> clazz = FunctionTemplate::New(OpticalFlow::New);
+  clazz->SetClassName(String::NewSymbol("OpticalFlow"));
+  clazz->InstanceTemplate()->SetInternalFieldCount(1);
+  clazz->PrototypeTemplate()->Set(
+    String::NewSymbol("calc"),
+    FunctionTemplate::New(OpticalFlow::Calc)->GetFunction()
+  );
+  target->Set(String::NewSymbol("OpticalFlow"), clazz->GetFunction());
+};
 
 OpticalFlow::OpticalFlow()
-    : ObjectWrap() {};
+  : ObjectWrap() {};
 
-OpticalFlow::~OpticalFlow() {};
+OpticalFlow::~OpticalFlow() {
+};
 
 Handle<Value> OpticalFlow::New(const Arguments& args) {
-    HandleScope scope;
-    OpticalFlow *opt = new OpticalFlow();
-    opt->Wrap(args.This());
-    return args.This();
-  };
+  HandleScope scope;
+  OpticalFlow *opt = new OpticalFlow();
+  opt->Wrap(args.This());
+  return args.This();
+};
 
 Handle<Value> OpticalFlow::Calc(const Arguments& args) {
-    HandleScope scope;
+  HandleScope scope;
 
-    if (args.Length() < 4) {
-      ThrowException(Exception::TypeError(String::New("5 arguments expected")));
-      return scope.Close(Undefined());
-    }
-
-    if (!args[0]->IsString()) {
-      ThrowException(Exception::TypeError(String::New("Wrong arguments(expect_path)")));
-      return scope.Close(Undefined());
-    }
-    if (!args[1]->IsString()) {
-      ThrowException(Exception::TypeError(String::New("Wrong arguments(target_path)")));
-      return scope.Close(Undefined());
-    }
-    if (!args[2]->IsNumber()) {
-      ThrowException(Exception::TypeError(String::New("Wrong arguments(threshold)")));
-      return scope.Close(Undefined());
-    }
-    if (!args[3]->IsNumber()) {
-      ThrowException(Exception::TypeError(String::New("Wrong arguments(span)")));
-      return scope.Close(Undefined());
-    }
-
-    v8::String::Utf8Value param1(args[0]->ToString());
-    v8::String::Utf8Value param2(args[1]->ToString());
-
-    string expect_path = string(*param1);
-    string target_path = string(*param2);
-
-    double threshold = args[2]->NumberValue();
-    int span = args[3]->IntegerValue();
-
-    OpticalFlow *opt = ObjectWrap::Unwrap<OpticalFlow>(args.This());
-    dispatch(expect_path, target_path, threshold, span, opt);
-
+  if (args.Length() < 4) {
+    ThrowException(Exception::TypeError(String::New("5 arguments expected")));
     return scope.Close(Undefined());
-  };
+  }
+
+  if (!args[0]->IsString()) {
+    ThrowException(Exception::TypeError(String::New("Wrong arguments(expect_path)")));
+    return scope.Close(Undefined());
+  }
+  if (!args[1]->IsString()) {
+    ThrowException(Exception::TypeError(String::New("Wrong arguments(target_path)")));
+    return scope.Close(Undefined());
+  }
+  if (!args[2]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("Wrong arguments(threshold)")));
+    return scope.Close(Undefined());
+  }
+  if (!args[3]->IsNumber()) {
+    ThrowException(Exception::TypeError(String::New("Wrong arguments(span)")));
+    return scope.Close(Undefined());
+  }
+
+  v8::String::Utf8Value param1(args[0]->ToString());
+  v8::String::Utf8Value param2(args[1]->ToString());
+
+  string expect_path = string(*param1);
+  string target_path = string(*param2);
+
+  double threshold = args[2]->NumberValue();
+  int span = args[3]->IntegerValue();
+
+  OpticalFlow *opt = ObjectWrap::Unwrap<OpticalFlow>(args.This());
+  dispatch(expect_path, target_path, threshold, span, opt);
+
+  return scope.Close(Undefined());
+};
 
 void OpticalFlow::Emit(
-    const string expect_image, const string target_image,
-    const cv::Mat *flowx, const cv::Mat *flowy,
-    const double threshold, const int span,
-    const float time
-  ) {
-cout << "Emit1" << endl;
+  const string expect_image, const string target_image,
+  const cv::Mat *flowx, const cv::Mat *flowy,
+  const double threshold, const int span,
+  const float time
+) {
+  HandleScope scope;
 
-cout << "Emit1" << endl;
-    HandleScope scope;
-cout << "Emit1.1" << endl;
-    //Local<Value> emit_v = handle_->Get(emit_symbol);
-cout << "Emit1.2" << endl;
-    //Local<Function> emit = emit_v.As<Function>();
-
-cout << "Emit2" << endl;
-    Local<Object> result = Object::New();
-    createResult(
-      expect_image, target_image,
-      flowx, flowy,
-      threshold, span,
-      time,
-      result);
-cout << "Emit3" << endl;
-    // 結果をコールバック
-    const unsigned argc = 2;
-    Local<Value> argv[argc] = { 
-      String::New("message"),
-      Local<Value>::New(result) 
-    };
-    node::MakeCallback(this->handle_, "emit", argc, argv);
-//    TryCatch tc;
-cout << "Emit4" << endl;
-/*
-    emit->Call(this->handle_, argc, argv);
-    if (tc.HasCaught()) {
-      FatalException(tc);
-    }
-*/
-cout << "Emit5" << endl;
+  Local<Object> result = Object::New();
+  createResult(
+    expect_image, target_image,
+    flowx, flowy,
+    threshold, span,
+    time,
+    result);
+  // 結果をコールバック
+  const unsigned argc = 2;
+  Local<Value> argv[argc] = { 
+    String::New("message"),
+    Local<Value>::New(result) 
   };
+  node::MakeCallback(this->handle_, "emit", argc, argv);
+};
+
+void OpticalFlow::Finish() {
+  HandleScope scope;
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { 
+    String::New("finish")
+  };
+  node::MakeCallback(this->handle_, "emit", argc, argv);
+};
 
 void init(Handle<Object> target) {
   emit_symbol = NODE_PSYMBOL("emit");
