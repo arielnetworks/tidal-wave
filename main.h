@@ -7,7 +7,7 @@
 
 #include "opencv2/core/core.hpp"
 
-class OpticalFlow : public node::ObjectWrap {
+class OpticalFlowEmitter : public node::ObjectWrap {
 public:
   static void Init(v8::Handle<v8::Object>& target);
   void Emit(
@@ -18,8 +18,8 @@ public:
   );
   void Finish();
 private:
-  OpticalFlow();
-  ~OpticalFlow();
+  OpticalFlowEmitter();
+  ~OpticalFlowEmitter();
 
   static v8::Handle<v8::Value> New(const v8::Arguments& args);
 

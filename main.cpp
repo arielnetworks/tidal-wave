@@ -21,7 +21,7 @@ int dispatch(
   const string target_path,
   const double threshold,
   const int span, 
-  OpticalFlow *opt
+  OpticalFlowEmitter *opt
 );
 
 // 解析結果をNode.jsで扱える型で生成
@@ -84,31 +84,31 @@ static void createResult(
   } 
 }
 
-void OpticalFlow::Init(Handle<Object>& target) {
-  Local<FunctionTemplate> clazz = FunctionTemplate::New(OpticalFlow::New);
+void OpticalFlowEmitter::Init(Handle<Object>& target) {
+  Local<FunctionTemplate> clazz = FunctionTemplate::New(OpticalFlowEmitter::New);
   clazz->SetClassName(String::NewSymbol("OpticalFlow"));
   clazz->InstanceTemplate()->SetInternalFieldCount(1);
   clazz->PrototypeTemplate()->Set(
     String::NewSymbol("calc"),
-    FunctionTemplate::New(OpticalFlow::Calc)->GetFunction()
+    FunctionTemplate::New(OpticalFlowEmitter::Calc)->GetFunction()
   );
   target->Set(String::NewSymbol("OpticalFlow"), clazz->GetFunction());
 };
 
-OpticalFlow::OpticalFlow()
+OpticalFlowEmitter::OpticalFlowEmitter()
   : ObjectWrap() {};
 
-OpticalFlow::~OpticalFlow() {
+OpticalFlowEmitter::~OpticalFlowEmitter() {
 };
 
-Handle<Value> OpticalFlow::New(const Arguments& args) {
+Handle<Value> OpticalFlowEmitter::New(const Arguments& args) {
   HandleScope scope;
-  OpticalFlow *opt = new OpticalFlow();
+  OpticalFlowEmitter *opt = new OpticalFlowEmitter();
   opt->Wrap(args.This());
   return args.This();
 };
 
-Handle<Value> OpticalFlow::Calc(const Arguments& args) {
+Handle<Value> OpticalFlowEmitter::Calc(const Arguments& args) {
   HandleScope scope;
 
   if (args.Length() < 4) {
@@ -142,13 +142,13 @@ Handle<Value> OpticalFlow::Calc(const Arguments& args) {
   double threshold = args[2]->NumberValue();
   int span = args[3]->IntegerValue();
 
-  OpticalFlow *opt = ObjectWrap::Unwrap<OpticalFlow>(args.This());
+  OpticalFlowEmitter *opt = ObjectWrap::Unwrap<OpticalFlowEmitter>(args.This());
   dispatch(expect_path, target_path, threshold, span, opt);
 
   return scope.Close(Undefined());
 };
 
-void OpticalFlow::Emit(
+void OpticalFlowEmitter::Emit(
   const string expect_image, const string target_image,
   const cv::Mat *flowx, const cv::Mat *flowy,
   const double threshold, const int span,
@@ -172,7 +172,7 @@ void OpticalFlow::Emit(
   node::MakeCallback(this->handle_, "emit", argc, argv);
 };
 
-void OpticalFlow::Finish() {
+void OpticalFlowEmitter::Finish() {
   HandleScope scope;
 
   const unsigned argc = 1;
@@ -184,7 +184,7 @@ void OpticalFlow::Finish() {
 
 void init(Handle<Object> target) {
   emit_symbol = NODE_PSYMBOL("emit");
-  OpticalFlow::Init(target);
+  OpticalFlowEmitter::Init(target);
 }
 
 NODE_MODULE(opticalflow, init)

@@ -1,10 +1,9 @@
-#include <iostream>
 #include <vector>
 #include <sstream>
 
-#include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
+#include "opticalflow.h"
 
 using namespace std;
 using namespace cv;
@@ -14,7 +13,7 @@ using namespace cv;
 using namespace cv::gpu;
 #endif
 
-float calcOpticalFlow(string expectImgPath, string targetImgPath, bool gpuMode, Mat &flowx, Mat &flowy) {
+float OpticalFlow::calculate(string expectImgPath, string targetImgPath, bool gpuMode, Mat &flowx, Mat &flowy) {
   if (expectImgPath.empty()) cout << "Specify left image path\n";
   if (targetImgPath.empty()) cout << "Specify right image path\n";
   if (expectImgPath.empty() || targetImgPath.empty()) return -1;

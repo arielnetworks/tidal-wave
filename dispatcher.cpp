@@ -12,6 +12,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
+#include "opticalflow.h"
 
 #include <node.h>
 #include <v8.h>
@@ -41,7 +42,7 @@ typedef struct {
   char target_image[255];
   float time;
 
-  OpticalFlow *opt;
+  OpticalFlowEmitter *opt;
   double threshold;
   int span;
 } ResponseBuffer;
@@ -49,7 +50,7 @@ typedef struct {
 typedef struct {
   string expect_path;
   string target_path;
-  OpticalFlow *opt;
+  OpticalFlowEmitter *opt;
   double threshold;
   int span;
 } ProducerArg;
@@ -73,8 +74,6 @@ static std::vector<ResponseBuffer*> *msg_buffer;
 
 static volatile int callback_count = 0;
 static volatile bool isRunning = true;
-
-float calcOpticalFlow(string pathL, string pathR, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
 
 // キューから依頼を取得して、OpticalFlow処理を実行する
 static void consumerThread(void* arg) {
@@ -114,7 +113,7 @@ static void consumerThread(void* arg) {
     // OpticalFlowを実行
     cv::Mat *flowx = new cv::Mat();
     cv::Mat *flowy = new cv::Mat();
-    float t = calcOpticalFlow(expect_image, target_image, gpuMode, *flowx, *flowy);
+    float t = OpticalFlow::calculate(expect_image, target_image, gpuMode, *flowx, *flowy);
 
     // 解析結果をレスポンスキューに入れる
     uv_mutex_lock(&res_mutex);
@@ -283,7 +282,7 @@ int dispatch(
   const string target_path,
   const double threshold,
   const int span, 
-  OpticalFlow *opt
+  OpticalFlowEmitter *opt
 ){
   cout << "device count: " << cv::gpu::getCudaEnabledDeviceCount() << endl;
   fprintf(stdout, "=== start consumer-producer test ===\n");
