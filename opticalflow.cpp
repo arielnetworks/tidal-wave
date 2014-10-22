@@ -1,8 +1,8 @@
 #include <vector>
 #include <sstream>
 
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include "opticalflow.h"
 
 using namespace std;
@@ -12,6 +12,12 @@ using namespace cv;
 #include "opencv2/gpu/gpu.hpp"
 using namespace cv::gpu;
 #endif
+
+OpticalFlow::OpticalFlow(double pyrScale, int numLevels, int winSize, int numIters, 
+                         int polyN, double polySigm, int flags)
+ : pyrScale(pyrScale), numLevels(numLevels), winSize(winSize), numIters(numIters), 
+   polyN(polyN), polySigma(polySigma), flags(flags) {
+}
 
 float OpticalFlow::calculate(string expectImgPath, string targetImgPath, bool gpuMode, Mat &flowx, Mat &flowy) {
   if (expectImgPath.empty()) cout << "Specify left image path\n";
@@ -33,14 +39,6 @@ float OpticalFlow::calculate(string expectImgPath, string targetImgPath, bool gp
     cv::resize(targetImg, resizedTargetImg, resizedTargetImg.size(), cv::INTER_NEAREST);
     targetImg = resizedTargetImg;
   }
-
-  double pyrScale = 0.5;
-  int numLevels = 3;
-  int winSize = 30;
-  int numIters = 3;
-  int polyN = 7;
-  double polySigma = 1.5;
-  int flags = OPTFLOW_FARNEBACK_GAUSSIAN;
 
 #ifdef USE_GPU
   GpuMat d_frameL(expectImg), d_targetImg(targetImg);

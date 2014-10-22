@@ -80,6 +80,7 @@ static void consumerThread(void* arg) {
   ConsumerArg *carg = (ConsumerArg*)arg;
 
   bool gpuMode = false;
+  OpticalFlow o;
 
   int devCount = cv::gpu::getCudaEnabledDeviceCount();
   if (carg->num < devCount) {
@@ -113,7 +114,7 @@ static void consumerThread(void* arg) {
     // OpticalFlowを実行
     cv::Mat *flowx = new cv::Mat();
     cv::Mat *flowy = new cv::Mat();
-    float t = OpticalFlow::calculate(expect_image, target_image, gpuMode, *flowx, *flowy);
+    float t = o.calculate(expect_image, target_image, gpuMode, *flowx, *flowy);
 
     // 解析結果をレスポンスキューに入れる
     uv_mutex_lock(&res_mutex);
