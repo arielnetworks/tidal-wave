@@ -40,7 +40,30 @@ float OpticalFlow::calculate(string expectImgPath, string targetImgPath, bool gp
     targetImg = resizedTargetImg;
   }
 
+  return calculateInternal(expectImg, targetImg, flowx, flowy);
+}
+
+float OpticalFlowByCPU::calculateInternal(Mat expectImg, Mat targetImg, Mat &flowx, Mat &flowy) {
+  int64 tc0, tc1;
+  Mat flowxy;
+
+  tc0 = getTickCount();
+  calcOpticalFlowFarneback(
+                expectImg, targetImg, flowxy, pyrScale, numLevels, winSize,
+                numIters, polyN, polySigma, flags);
+  tc1 = getTickCount();
+
+  Mat planes[] = {flowx, flowy};
+  split(flowxy, planes);
+  flowx = planes[0]; flowy = planes[1];
+
+  return (tc1-tc0)/getTickFrequency();
+}
+
 #ifdef USE_GPU
+float OpticalFlowByGPU::calculateInternal(Mat expectImg, Mat targetImg, Mat &flowx, Mat &flowy) {
+  int64 tc0, tc1;
+
   GpuMat d_frameL(expectImg), d_targetImg(targetImg);
   GpuMat d_flowx, d_flowy;
   FarnebackOpticalFlow d_calc;
@@ -52,32 +75,13 @@ float OpticalFlow::calculate(string expectImgPath, string targetImgPath, bool gp
   d_calc.polyN = polyN;
   d_calc.polySigma = polySigma;
   d_calc.flags = flags;
-#endif
 
-  Mat flowxy;
-
-  int64 tc0, tc1;
-
-
-  if (gpuMode) {
-#ifdef USE_GPU
-    tc0 = getTickCount();
-    d_calc(d_frameL, d_targetImg, d_flowx, d_flowy);
-    tc1 = getTickCount();
-    d_flowx.download(flowx);
-    d_flowy.download(flowy);
-#endif
-  } else {
-    tc0 = getTickCount();
-    calcOpticalFlowFarneback(
-                expectImg, targetImg, flowxy, pyrScale, numLevels, winSize,
-                numIters, polyN, polySigma, flags);
-    tc1 = getTickCount();
-
-    Mat planes[] = {flowx, flowy};
-    split(flowxy, planes);
-    flowx = planes[0]; flowy = planes[1];
-  }
+  tc0 = getTickCount();
+  d_calc(d_frameL, d_targetImg, d_flowx, d_flowy);
+  tc1 = getTickCount();
+  d_flowx.download(flowx);
+  d_flowy.download(flowy);
 
   return (tc1-tc0)/getTickFrequency();
 }
+#endif

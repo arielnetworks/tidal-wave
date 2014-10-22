@@ -9,7 +9,9 @@ public:
   virtual ~OpticalFlow() {};
 
   float calculate(std::string expectImgPath, std::string targetImgPath, bool gpuMode, cv::Mat &flowx, cv::Mat &flowy);
-private:
+
+protected:
+  virtual float calculateInternal(cv::Mat expectImg, cv::Mat targetImg, cv::Mat &flowx, cv::Mat &flowy) = 0;
 
   double pyrScale;
   int numLevels;
@@ -20,3 +22,14 @@ private:
   int flags;
 };
 
+class OpticalFlowByCPU : public OpticalFlow {
+public:
+  virtual float calculateInternal(cv::Mat expectImg, cv::Mat targetImg, cv::Mat &flowx, cv::Mat &flowy);
+};
+
+#ifdef USE_GPU
+class OpticalFlowByGPU : public OpticalFlow {
+public:
+  virtual float calculateInternal(cv::Mat expectImg, cv::Mat targetImg, cv::Mat &flowx, cv::Mat &flowy);
+};
+#endif
