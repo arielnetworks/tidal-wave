@@ -13,6 +13,9 @@
         "<!@(pkg-config --libs opencv)",
         "-L/usr/local/cuda-6.0/lib64"
       ],
+      "defines": [
+        "USE_GPU"
+      ]
     }
   ]
 }
