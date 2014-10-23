@@ -24,12 +24,14 @@ protected:
 
 class OpticalFlowByCPU : public OpticalFlow {
 public:
+  OpticalFlowByCPU() : OpticalFlow(){};
   virtual float calculateInternal(cv::Mat expectImg, cv::Mat targetImg, cv::Mat &flowx, cv::Mat &flowy);
 };
 
 #ifdef USE_GPU
 class OpticalFlowByGPU : public OpticalFlow {
 public:
+  OpticalFlowByGPU() : OpticalFlow(){};
   virtual float calculateInternal(cv::Mat expectImg, cv::Mat targetImg, cv::Mat &flowx, cv::Mat &flowy);
 };
 #endif

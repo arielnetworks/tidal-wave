@@ -14,7 +14,7 @@ using namespace cv::gpu;
 #endif
 
 OpticalFlow::OpticalFlow(double pyrScale, int numLevels, int winSize, int numIters, 
-                         int polyN, double polySigm, int flags)
+                         int polyN, double polySigma, int flags)
  : pyrScale(pyrScale), numLevels(numLevels), winSize(winSize), numIters(numIters), 
    polyN(polyN), polySigma(polySigma), flags(flags) {
 }
