@@ -12,7 +12,9 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
+#ifdef USE_GPU
 #include "opencv2/gpu/gpu.hpp"
+#endif
 #include "opticalflow.h"
 
 #include <node.h>
@@ -82,11 +84,13 @@ static void consumerThread(void* arg) {
 
   bool gpuMode = false;
 
+#ifdef USE_GPU
   int devCount = cv::gpu::getCudaEnabledDeviceCount();
   if (carg->num < devCount) {
     cv::gpu::setDevice(carg->num);
     gpuMode = true;
   }
+#endif
 
   OpticalFlow *o;
   if (gpuMode) {
@@ -297,7 +301,9 @@ int dispatch(
   const int span, 
   OpticalFlowEmitter *opt
 ){
+#ifdef USE_GPU
   cout << "device count: " << cv::gpu::getCudaEnabledDeviceCount() << endl;
+#endif
   fprintf(stdout, "=== start consumer-producer test ===\n");
 
   ngx_queue_init(&req_queue);
