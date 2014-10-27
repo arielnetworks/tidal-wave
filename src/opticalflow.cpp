@@ -98,9 +98,9 @@ namespace tidalwave {
     FarnebackOpticalFlow d_calc;
 
     d_calc.pyrScale = parameter.pyrScale;
-    d_calc.pyrLevels = parameter.pyrLevels;
+    d_calc.numLevels = parameter.pyrLevels;
     d_calc.winSize = parameter.winSize;
-    d_calc.pyrIterations = parameter.pyrIterations;
+    d_calc.numIters = parameter.pyrIterations;
     d_calc.polyN = parameter.polyN;
     d_calc.polySigma = parameter.polySigma;
     d_calc.flags = parameter.flags;

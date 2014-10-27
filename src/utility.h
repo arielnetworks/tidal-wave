@@ -16,7 +16,7 @@ namespace tidalwave{
      */
     static bool getFilesInDirectory(const std::string dirPath, std::vector<std::string> &list, int currentDepth = 1);
   private :
-    static const int SH_PATH_MAX = 4096;
+    static const unsigned int SH_PATH_MAX = 4096;
   };
 }
 

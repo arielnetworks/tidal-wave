@@ -1,6 +1,11 @@
 #include <uv.h>
 #include "consumer.h"
 
+#ifdef USE_GPU
+#include "opencv2/gpu/gpu.hpp"
+using namespace cv::gpu;
+#endif
+
 using namespace std;
 
 namespace tidalwave {
