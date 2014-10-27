@@ -3,17 +3,27 @@
 
 <head>
   <meta charset="utf-8">
+
+  <link rel="stylesheet" media="screen" href="bower_components/bootstrap/dist/css/bootstrap.css">
+
+  <script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
   <script type="text/javascript" src="bower_components/angular/angular.js"></script>
   <script type="text/javascript" src="bower_components/d3/d3.js"></script>
   <script type="text/javascript" src="bower_components/socket.io-client/socket.io.js"></script>
+  <script type="text/javascript" src="bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js"></script>
+  <script type="text/javascript" src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+
   <script type="text/javascript" src="app.js"></script>
+  <script type="text/javascript" src="flow.js"></script>
 </head>
 
 <body>
 <div ng-controller="myController">
-  <div ng-repeat="item in items">
-    <flow data="item"/>
-  </div>
+  <carousel>
+    <slide ng-repeat="item in items">
+      <flow data="item.data" mode="item.mode" opacity="item.opacity"/>
+    </slide>
+  </carousel>
 </div>
 </body>
 

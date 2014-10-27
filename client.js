@@ -1,4 +1,4 @@
-var socket = require('socket.io-client')("ws://localhost:5000");
+var socket = require('socket.io-client')("ws://localhost:5555");
 
 socket.on('message', function(data) {
   console.log('vector length: ' + data.vector.length);
@@ -15,8 +15,17 @@ socket.on('disconnect', function() {
 });
 
 socket.send({
-  'expect_path': 'public/images',
-  'target_path': 'public/images2',
-  'threshold': 5,
-  'span': 10
+  'expect_path': 'public/test_images/widget_common_normal',
+  'target_path': 'public/test_images/widget_common_normal_scratch',
+  'options': {
+    'threshold': 5.0,
+    'span': 10,
+    'pyrScale':0.5,
+    'pyrLevels': 3,
+    'winSize': 30,
+    'pyrIterations': 3,
+    'polyN': 7,
+    'polySigma': 1.5,
+    'flags': 256
+  }
 });

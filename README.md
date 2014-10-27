@@ -10,23 +10,47 @@
 
 ## 必要なもの
 
+### 必須
+
+Windowsでは動かないよ。
+
+* node.js 0.10.x
+    * node-gyp
+* OpenCV 2.4.x
+    * cmake
+
+### オプション
+
 * cuda-6.0
     * gcc-4.6
     * 最新のgccだとcudaが対応していないので古いもの。
     * Distributionによって使えるgccのバージョンが異なるので注意。以下を参照。
     * http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-linux/#abstract
     * Ubuntu 14.04は未対応。
-* node.js 0.10.x
-    * node-gyp
-* OpenCV 2.4.x
-    * cmake
-
 * CUDAに対応したNVIDIA製のグラフィックボード
     * https://developer.nvidia.com/cuda-gpus
 
+CUDAを利用するとGPUを利用してより高速に処理がおこなえるようになります
+
 ## 環境構築方法
 
-### CUDAのインストール
+### CUDAを利用しない場合
+
+#### OpenCVのインストール
+
+~~~
+$ sudo apt-get install cmake pkg-confg libopencv-dev
+~~~
+
+#### node-gypのインストール
+
+~~~
+$ npm install -g node-gyp
+~~~
+
+### CUDAを利用する場合
+
+#### CUDAのインストール
 
 * sudo apt-get install gcc g++
 
@@ -116,7 +140,7 @@ deviceQuery, CUDA Driver = CUDART, CUDA Driver Version = 6.0, CUDA Runtime Versi
 Result = PASS
 ~~~
 
-### OpenCVのインストール
+#### OpenCVのインストール
 
 CUDAを有効にする必要があるので、ソースからビルドしなければならない。
 
@@ -149,16 +173,12 @@ g++ farneback_optical_flow.cpp `/usr/bin/pkg-config --cflags --libs opencv` -L/u
 ./a.out -l hoge.png -r fuga.png
 ~~~
 
-### tidal-waveのための環境構築
-
-~~~
-npm install -g node-gyp
-~~~
-
 
 ## 使い方
 
 ### ビルド
+
+* CUDAを利用しない場合は、binding.gypのUSE_GPUを削除する
 
 ~~~
 npm install
@@ -179,15 +199,36 @@ node index.js
 
 * expect_path: 期待画像のディレクトリ
 * target_path: 対象画像のディレクトリ
-* threshold: しきい値(3〜5くらいが最適)
-* span: ベクトルを取得する間隔
+* options: オプション(省略可能)
+    * threshold: しきい値(3〜5くらいが最適), デフォルト=5.0
+    * span: ベクトルを取得する間隔, デフォルト=10
+    * pyrScale: ピラミッド画像のスケール(<1), デフォルト=0.5
+    * pyrLevels: ピラミッドの層の数, デフォルト=3
+    * winSize: 平均化窓サイズ, デフォルト=30
+    * pyrIterations: アルゴリズムの反復数, デフォルト=3
+    * polyN: ピクセル近傍領域のサイズ, デフォルト=7
+    * polySigma: ガウス分布の標準偏差, デフォルト=1.5
+    * flags: 処理フラグ, デフォルト=256(ガウシアンフィルタの利用)
 
+
+* オプティカルフローのパラメータの詳細は以下を参照のこと
+    * http://opencv.jp/opencv-2svn/cpp/motion_analysis_and_object_tracking.html
+ 
 ~~~
 {
   'expect_path': 'public/images',
   'target_path': 'public/images2',
-  'threshold': 5,
-  'span': 10
+  'options': {
+    'threshold': 5.0,
+    'span': 10,
+    'pyrScale':0.5,
+    'pyrLevels': 3,
+    'winSize': 30,
+    'pyrIterations': 3,
+    'polyN': 7,
+    'polySigma': 1.5,
+    'flags': 256
+  }
 }
 ~~~
 

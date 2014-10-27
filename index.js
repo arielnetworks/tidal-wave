@@ -6,7 +6,7 @@ var express = require('express'),
 var OpticalFlow = require('./opticalflow.js');
 
 var server = http.createServer(app);
-server.listen(5001);
+server.listen(5555);
 
 app.use(express.static(__dirname + '/public'));
 
@@ -27,7 +27,8 @@ socket.on('connection', function(client) {
   client.on('message', function(data) {
     console.log(data);
     var onMessage = function(msg) {
-      console.log(msg.vector.length);
+      //console.log("message vector length: " + msg.vector.length);
+      console.log(msg);
       client.send(msg);
     };
     opticalflow.on('message', onMessage);
@@ -40,8 +41,7 @@ socket.on('connection', function(client) {
     opticalflow.calc(
       data.expect_path,
       data.target_path,
-      data.threshold ? data.threshold : 5,
-      data.span ? data.span : 10
+      data.options
     );
   });
 });
