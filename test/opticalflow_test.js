@@ -11,13 +11,23 @@ describe('Opticalflow', function(){
 
   it('starts calcuration on calling "calc()".', function(done){
     var o = new OpticalFlow;
-    o.on('finish', done);
+    o.on('finish', function(data) { done() });
     o.calc(fixturePath + '/expected', fixturePath + '/revision1');
   });
 
   it('provides error when specified directory does not exist.', function(done){
     var o = new OpticalFlow;
-    o.on('error', done);
+    o.on('error', function(data) {
+      for (var property in data) {
+        var value = data[property];
+        switch(property) {
+          case 'status': assert(value == 'ERROR'); break;
+          case 'reason': assert(_.isString(value)); break;
+          default: assert.fail(); break;
+        }
+      }
+      done();
+    });
     o.calc(fixturePath + '/expected', fixturePath + '/__NOT_EXIST__');
   });
 
@@ -47,7 +57,7 @@ describe('Opticalflow', function(){
         }
       }
     });
-    o.on('finish', done);
+    o.on('finish', function(data) { done() });
     o.calc(fixturePath + '/expected', fixturePath + '/revision1');
   });
 
