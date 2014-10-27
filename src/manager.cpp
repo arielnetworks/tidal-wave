@@ -11,14 +11,15 @@
 #endif
 
 #include "manager.h"
+#include "utility.h"
 
 using namespace v8;
 using namespace std;
 
 namespace tidalwave {
 
-  Manager::Manager(Observer<Response> *emitter, int consumer_num)
-      : async(), requestQueue(), responseQueue(), messageBuffer(), consumers(), callback_count(0), emitter(emitter) {
+  Manager::Manager(Observer<Response, string, Report> *emitter, int consumer_num)
+      : async(), requestQueue(), responseQueue(), messageBuffer(),errorBuffer(), consumers(), callback_count(0), emitter(emitter) {
 
     // ConsumerThreadの生成
     // Dispatcherのインスタンスは最後まで解放されないので、ここでつくったConsumerのインスタンスも解放しない。
@@ -31,6 +32,8 @@ namespace tidalwave {
   int Manager::request(const Parameter &param) {
     cout << "=== start consumer-producer test ===" << endl;
 
+    report.total = 0;
+    report.reported = 0;
     callback_count = 0;
     requestQueue.reset();
 
@@ -56,24 +59,33 @@ namespace tidalwave {
       cons->start(parameter.optParam);
     }
 
+    if (!Utility::directoryIsExists(parameter.expect_path)) {
+      errorBuffer.push(parameter.expect_path + " is not exsits.");
+      uv_async_send(&async);
+    }
+    if (!Utility::directoryIsExists(parameter.target_path)) {
+      errorBuffer.push(parameter.target_path + " is not exsits.");
+      uv_async_send(&async);
+    }
+
     Producer producer(requestQueue);
     int request_count = producer.run(parameter);
 
-    int finished_count = 0;
     cout << "request count : " << request_count << endl;
     // 画像比較を依頼した数と処理した数が一致するまで繰り返す
-    while (request_count != finished_count) {
+    while (request_count != report.total) {
       // キューからレスポンスを取得
       Response res;
       if (responseQueue.tryPop(res)) {
-        res.threshold = parameter.threshold;
-        res.span = parameter.span;
         messageBuffer.push(res);
         // sendCallback処理を実行してもらうように通知する
         uv_async_send(&async);
-        finished_count++;
+        report.total++;
+        if (res.status == "SUSPICIOUS") {
+          report.reported++;
+        }
       }
-      cout << "request: " << request_count << ", finished: " << finished_count << endl;
+      cout << "request: " << request_count << ", finished: " << report.total << endl;
     }
 
     // ConsumerThreadに完了を通知して、終了するまで待つ
@@ -104,7 +116,7 @@ namespace tidalwave {
     for (vector<Response>::iterator it = responses.begin(); it != responses.end(); it++) {
       Response res_buf = *it;
 
-      if(res_buf.status == "ERROR"){
+      if (res_buf.status == "ERROR") {
         emitter->onError(res_buf.reason);
       } else {
         emitter->onNext(res_buf);
@@ -114,12 +126,19 @@ namespace tidalwave {
       cout << "callback_count: " << callback_count << endl;
     }
 
+    vector<string> errors = errorBuffer.popAll();
+    for (vector<string>::iterator it = errors.begin(); it != errors.end(); it++) {
+      string reason = *it;
+      emitter->onError(reason);
+    }
+
   };
 
   // すべての処理が完了した時に呼び出される
   void Manager::finish() {
     // Node.js側に終了のコールバック
-    emitter->onCompleted();
+
+    emitter->onCompleted(report);
     uv_close((uv_handle_t *) &async, NULL);
   }
 
@@ -127,10 +146,12 @@ namespace tidalwave {
     WorkData &data = *static_cast<WorkData *>(req->data);
     data.manager->work(data.parameter);
   }
+
   void Manager::notifyHandler(uv_async_t *handle, int status) {
     Manager &self = *static_cast<Manager *>(handle->data);
     self.notify();
   }
+
   void Manager::finishHandler(uv_work_t *req, int status) {
     WorkData &data = *static_cast<WorkData *>(req->data);
     data.manager->finish();

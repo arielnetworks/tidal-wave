@@ -21,7 +21,7 @@ namespace tidalwave {
    */
   class Manager {
   public:
-    Manager(Observer<Response> *emitter, int consumer_num = MAX_CONSUMERS);
+    Manager(Observer<Response, std::string, Report> *emitter, int consumer_num = MAX_CONSUMERS);
 
     /*
      * @brief Node.jsからの依頼に応じて処理を開始する
@@ -48,7 +48,9 @@ namespace tidalwave {
 
 
     static void workHandler(uv_work_t *req);
+
     static void notifyHandler(uv_async_t *handle, int status);
+
     static void finishHandler(uv_work_t *req, int status);
 
   private:
@@ -57,14 +59,16 @@ namespace tidalwave {
     MessageQueue<Request> requestQueue;
     MessageQueue<Response> responseQueue;
     MessageBuffer<Response> messageBuffer;
+    MessageBuffer<std::string> errorBuffer;
 
     std::vector<Consumer *> consumers;
 
+    Report report;
     int callback_count;
 
     WorkData workData;
     uv_work_t workDataContainer;
-    Observer<Response> *emitter;
+    Observer<Response, std::string, Report> *emitter;
   };
 }
 #endif // MANAGER_H

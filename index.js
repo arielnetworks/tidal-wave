@@ -32,8 +32,15 @@ socket.on('connection', function(client) {
       client.send(msg);
     };
     opticalflow.on('message', onMessage);
-    opticalflow.once('finish', function() {
+    opticalflow.on('error', function(err) {
+      console.log("error!!");
+      console.log(err);
+      client.emit('error', err);
+    });
+    opticalflow.once('finish', function(report) {
       console.log("finish!!");
+      console.log(report);
+      client.emit('finish', report);
       client.disconnect();
       busy = false;
       opticalflow.removeListener('message', onMessage);

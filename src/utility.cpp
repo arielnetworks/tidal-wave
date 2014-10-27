@@ -49,4 +49,9 @@ namespace tidalwave {
     }
     return canRead;
   }
+
+  bool Utility::directoryIsExists(const std::string dirPath) {
+    struct stat st;
+    return ::stat(dirPath.c_str(), &st) == 0;
+  }
 }

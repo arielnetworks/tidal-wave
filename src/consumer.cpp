@@ -56,12 +56,29 @@ namespace tidalwave {
         // 解析結果をレスポンスキューに入れる
         Response res;
         if (status.code == OK) {
-          res.status = "OK";
-          res.flowx = flowx;
-          res.flowy = flowy;
+          for (int y = 0; y < flowx.rows; ++y) {
+            if (y % req.span != 0) continue;
+            for (int x = 0; x < flowx.cols; ++x) {
+              if (x % req.span != 0) continue;
+              float dx = flowx.at<float>(y, x);
+              float dy = flowy.at<float>(y, x);
+              float len = (dx * dx) + (dy * dy);
+              if (len > (req.threshold * req.threshold)) {
+                Vector v;
+                v.x = x;
+                v.y = y;
+                v.dx = dx;
+                v.dy = dy;
+                res.vectors.push_back(v);
+              }
+            }
+          }
+          res.status = res.vectors.size() == 0 ? "OK" : "SUSPICIOUS";
           res.time = status.time;
           res.expect_image = req.expect_image;
           res.target_image = req.target_image;
+          res.span = req.span;
+          res.threshold = req.threshold;
           cout << "finish optical flow: " << status.time << endl;
         } else {
           res.status = "ERROR";

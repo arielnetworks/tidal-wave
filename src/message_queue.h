@@ -13,11 +13,22 @@ namespace tidalwave {
   struct Request {
     std::string expect_image;
     std::string target_image;
+    double threshold;
+    int span;
+  };
+
+  struct Vector {
+    int x;
+    int y;
+    double dx;
+    double dy;
   };
 
   struct Response {
-    cv::Mat flowx;
-    cv::Mat flowy;
+    Response() : vectors() {
+    }
+
+    std::vector<Vector> vectors;
     std::string expect_image;
     std::string target_image;
     float time;
@@ -26,6 +37,11 @@ namespace tidalwave {
 
     std::string status;
     std::string reason;
+  };
+
+  struct Report {
+    int total;
+    int reported;
   };
 
 

@@ -6,13 +6,15 @@
 #include <sstream>
 #include <opencv2/core/core.hpp>
 
-namespace tidalwave{
-  template<typename T>
+namespace tidalwave {
+  template<typename TValue, typename TReason, typename TReport>
   class Observer {
   public:
-    virtual void onNext(const T& value) = 0;
-    virtual void onError(const std::string &reason) = 0;
-    virtual void onCompleted() = 0;
+    virtual void onNext(const TValue &value) = 0;
+
+    virtual void onError(const TReason &reason) = 0;
+
+    virtual void onCompleted(const TReport &) = 0;
   };
 }
 #endif // OBSERVER_H

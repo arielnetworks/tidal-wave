@@ -28,6 +28,8 @@ namespace tidalwave {
           Request req;
           req.expect_image = *expect_it;
           req.target_image = *target_it;
+          req.span = param.span;
+          req.threshold = param.threshold;
           std::cout << "request: " << expect_image << " <-> " << target_image << endl;
           requestQueue.push(req);
           request_count++;

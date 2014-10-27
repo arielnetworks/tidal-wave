@@ -3,11 +3,11 @@
 
 #include <vector>
 
-namespace tidalwave{
+namespace tidalwave {
   /*
    * @brief 便利クラス
    */
-  class Utility{
+  class Utility {
   public:
     /*
      * @brief 指定したディレクトリ配下の全ファイル名をリストで取得する
@@ -15,6 +15,9 @@ namespace tidalwave{
      * @param list 取得したファイル一覧
      */
     static bool getFilesInDirectory(const std::string dirPath, std::vector<std::string> &list, int currentDepth = 1);
+
+    static bool directoryIsExists(const std::string dirPath);
+
   private :
     static const unsigned int SH_PATH_MAX = 4096;
   };

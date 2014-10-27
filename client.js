@@ -1,4 +1,4 @@
-var socket = require('socket.io-client')("ws://localhost:5555");
+var socket = require('socket.io-client')("ws://localhost:5001");
 
 socket.on('message', function(data) {
   console.log('vector length: ' + data.vector.length);
@@ -9,6 +9,14 @@ socket.on('message', function(data) {
   console.log('threshold: ' + data.threshold);
   console.log('time: ' + data.time);
   console.log('status: ' + data.status);
+});
+socket.on('error', function(err) {
+  console.log('error');
+  console.log(err);
+});
+socket.on('finish', function(report) {
+  console.log('report');
+  console.log(report);
 });
 socket.on('disconnect', function() {
   console.log('disconnect');

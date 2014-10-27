@@ -23,6 +23,8 @@ namespace tidalwave {
   static Persistent<String> DX_SYMBOL = NODE_PSYMBOL("dx");
   static Persistent<String> DY_SYMBOL = NODE_PSYMBOL("dy");
   static Persistent<String> VECTOR_SYMBOL = NODE_PSYMBOL("vector");
+  static Persistent<String> TOTAL_SYMBOL = NODE_PSYMBOL("total");
+  static Persistent<String> REPORTED_SYMBOL = NODE_PSYMBOL("reported");
 
   void Broker::initialize(Handle<Object> &target) {
     Local<FunctionTemplate> clazz = FunctionTemplate::New(Broker::createInstance);
@@ -52,24 +54,28 @@ namespace tidalwave {
     HandleScope scope;
 
     Local<Object> result = Object::New();
-
     result->Set(STATUS_SYMBOL, String::New("ERROR"));
     result->Set(REASON_SYMBOL, String::New(reason.c_str()));
 
     const unsigned argc = 2;
     Local<Value> argv[argc] = {
-        String::New("message"),
+        String::New("error"),
         Local<Value>::New(result)
     };
     node::MakeCallback(this->handle_, "emit", argc, argv);
   }
 
-  void Broker::onCompleted() {
+  void Broker::onCompleted(const Report &report) {
     HandleScope scope;
 
-    const unsigned argc = 1;
+    Local<Object> result = Object::New();
+    result->Set(TOTAL_SYMBOL, Integer::New(report.total));
+    result->Set(REPORTED_SYMBOL, Integer::New(report.reported));
+
+    const unsigned argc = 2;
     Local<Value> argv[argc] = {
-        String::New("finish")
+        String::New("finish"),
+        Local<Value>::New(result)
     };
     node::MakeCallback(this->handle_, "emit", argc, argv);
   };
@@ -137,40 +143,27 @@ namespace tidalwave {
   Local<Object> Broker::convertResult(const Response &value) {
     HandleScope scope;
     Local<Object> result = Object::New();
+
+    result->Set(STATUS_SYMBOL, String::New(value.status.c_str()));
     result->Set(SPAN_SYMBOL, Integer::New(value.span));
     result->Set(THRESHOLD_SYMBOL, Number::New(value.threshold));
     result->Set(EXPECT_IMAGE_SYMBOL, String::New(value.expect_image.c_str()));
     result->Set(TARGET_IMAGE_SYMBOL, String::New(value.target_image.c_str()));
-
     result->Set(TIME_SYMBOL, Number::New(value.time));
 
-
-    Local<Array> vectors = Array::New();
     uint32_t vector_len = 0;
-    for (int y = 0; y < value.flowx.rows; ++y) {
-      if (y % value.span != 0) continue;
-      for (int x = 0; x < value.flowx.cols; ++x) {
-        if (x % value.span != 0) continue;
-        float dx = value.flowx.at<float>(y, x);
-        float dy = value.flowy.at<float>(y, x);
-        float len = (dx * dx) + (dy * dy);
-        if (len > (value.threshold * value.threshold)) {
-          Local<Object> v = Object::New();
-          v->Set(X_SYMBOL, Integer::New(x));
-          v->Set(Y_SYMBOL, Integer::New(y));
-          v->Set(DX_SYMBOL, Number::New(dx));
-          v->Set(DY_SYMBOL, Number::New(dy));
-          vectors->Set(vector_len++, v);
-        }
-      }
+    Local<Array> vectors = Array::New();
+    for (vector<Vector>::const_iterator it = value.vectors.begin(); it != value.vectors.end(); it++) {
+      Vector v = *it;
+      Local<Object> o = Object::New();
+      o->Set(X_SYMBOL, Integer::New(v.x));
+      o->Set(Y_SYMBOL, Integer::New(v.y));
+      o->Set(DX_SYMBOL, Number::New(v.dx));
+      o->Set(DY_SYMBOL, Number::New(v.dy));
+      vectors->Set(vector_len++, o);
     }
     result->Set(VECTOR_SYMBOL, vectors);
 
-    if (vector_len == 0) {
-      result->Set(STATUS_SYMBOL, String::New("OK"));
-    } else {
-      result->Set(STATUS_SYMBOL, String::New("SUSPICIOUS"));
-    }
     return scope.Close(result);
   }
 

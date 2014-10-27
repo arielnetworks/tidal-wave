@@ -17,7 +17,7 @@ namespace tidalwave {
   /*
    * @brief Node.jsとC++の世界を仲介するクラス
    */
-  class Broker : public node::ObjectWrap, public Observer<Response> {
+  class Broker : public node::ObjectWrap, public Observer<Response, std::string, Report> {
   public:
 
     /*
@@ -41,7 +41,7 @@ namespace tidalwave {
     /*
      * @brief C++からNode.jsにすべての処理が完了したことを通知する
      */
-    virtual void onCompleted();
+    virtual void onCompleted(const Report &report);
 
   private:
     Broker();
@@ -63,8 +63,9 @@ namespace tidalwave {
      */
     static v8::Local<v8::Object> convertResult(const Response &value);
 
-    static int getInt32OrDefault(const v8::Local<v8::Value> &arg, const std::string& name, int defaultValue);
-    static double getNumberOrDefault(const v8::Local<v8::Value> &arg, const std::string& name, double defaultValue);
+    static int getInt32OrDefault(const v8::Local<v8::Value> &arg, const std::string &name, int defaultValue);
+
+    static double getNumberOrDefault(const v8::Local<v8::Value> &arg, const std::string &name, double defaultValue);
 
     // この2つのインスタンスはプログラムが終了するまで解放しない
     static Broker *broker;
