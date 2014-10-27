@@ -35,8 +35,8 @@ angular.module('app')
         scope.$watch('data', function (newval) {
 
           var img = new Image();
-          var expect_img = scope.data.expect_image.replace('public', 'http://10.0.2.90:5001');
-          var target_img = scope.data.target_image.replace('public', 'http://10.0.2.90:5001');
+          var expect_img = scope.data.expect_image.replace('public', '');
+          var target_img = scope.data.target_image.replace('public', '');
           img.src = expect_img;
           img.onload = function () {
 

@@ -6,7 +6,7 @@ var express = require('express'),
 var OpticalFlow = require('./opticalflow.js');
 
 var server = http.createServer(app);
-server.listen(5555);
+server.listen(5001);
 
 app.use(express.static(__dirname + '/public'));
 
