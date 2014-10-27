@@ -11,7 +11,18 @@ describe('Opticalflow', function(){
 
   it('starts calcuration on calling "calc()".', function(done){
     var o = new OpticalFlow;
-    o.on('finish', function(data) { done() });
+    o.on('finish', function(data) {
+      for (var property in data) {
+        if (!data.hasOwnProperty(property)) return;
+        var value = data[property];
+        switch(property) {
+          case 'reported': assert(_.isNumber(value)); break;
+          case 'total': assert(_.isNumber(value)); break;
+          default: assert.fail(); break;
+        }
+      }
+      done();
+    ;});
     o.calc(fixturePath + '/expected', fixturePath + '/revision1');
   });
 
@@ -19,6 +30,7 @@ describe('Opticalflow', function(){
     var o = new OpticalFlow;
     o.on('error', function(data) {
       for (var property in data) {
+        if (!data.hasOwnProperty(property)) return;
         var value = data[property];
         switch(property) {
           case 'status': assert(value == 'ERROR'); break;
@@ -36,6 +48,7 @@ describe('Opticalflow', function(){
     var results = [];
     o.on('message', function(data) {
       for (var property in data) {
+        if (!data.hasOwnProperty(property)) return;
         var value = data[property];
         switch(property) {
           case 'span':
