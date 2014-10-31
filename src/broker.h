@@ -11,13 +11,15 @@
 #include "opencv2/core/core.hpp"
 #include "observer.h"
 #include "manager.h"
+#include "opticalflow.h"
+#include "message_queue.h"
 
 namespace tidalwave {
 
   /*
    * @brief Node.jsとC++の世界を仲介するクラス
    */
-  class Broker : public node::ObjectWrap, public Observer<Response, std::string, Report> {
+  class Broker : public node::ObjectWrap, public Observer<Response, std::string> {
   public:
 
     /*
@@ -36,12 +38,12 @@ namespace tidalwave {
      * @brief C++からNode.jsにエラーの通知をおこなう
      * @param reason エラー情報
      */
-    virtual void onError(const std::string &reason);
+    virtual void onError(const std::string &err);
 
     /*
      * @brief C++からNode.jsにすべての処理が完了したことを通知する
      */
-    virtual void onCompleted(const Report &report);
+    virtual void onCompleted();
 
   private:
     Broker();
@@ -69,7 +71,7 @@ namespace tidalwave {
 
     // この2つのインスタンスはプログラムが終了するまで解放しない
     static Broker *broker;
-    static Manager *dispatcher;
+    static Manager *manager;
 
   };
 }

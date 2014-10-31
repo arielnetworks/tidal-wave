@@ -1,6 +1,6 @@
 //var heapdump = require('heapdump')
 
-var OpticalFlow = require('./opticalflow.js');
+var OpticalFlow = require('./index.js');
 
 
 var opticalflow = new OpticalFlow();

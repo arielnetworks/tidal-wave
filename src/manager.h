@@ -2,38 +2,44 @@
 #define MANAGER_H
 
 #include "observer.h"
-#include "producer.h"
 #include "message_buffer.h"
-
-// CPUのコア数とGPUのデバイス数の合計に設定すると最もパフォーマンスがよい
-#define MAX_CONSUMERS 5
+#include "message_queue.h"
+#include "consumer.h"
 
 namespace tidalwave {
-  class Manager;
 
-  struct WorkData {
-    Parameter parameter;
-    Manager *manager;
+  struct Parameter {
+    double threshold;
+    int span;
+    int numThreads;
+    OpticalFlowParameter optParam;
   };
-
   /*
    * @brief Node.js側からの依頼に応じて、各スレッドを立ち上げたりコールバックを設定したり終了処理をおこなったりするクラス
    */
   class Manager {
   public:
-    Manager(Observer<Response, std::string, Report> *emitter, int consumer_num = MAX_CONSUMERS);
+    Manager(Observer<Response, std::string> *emitter);
+
+    /*
+     * @brief スレッドを立ち上げてリクエストを受付可能状態にする
+     * @param param OpticalFlowの実行に必要なパラメータ
+     */
+    int start(const Parameter &param);
+
+    void stop();
 
     /*
      * @brief Node.jsからの依頼に応じて処理を開始する
-     * @param param OpticalFlowの実行に必要なパラメータ
+     * @param req 比較する画像
      */
-    int request(const Parameter &param);
+    int request(const std::string &expect_image, const std::string &target_image);
 
     /*
      * @brief 各スレッドを立ち上げ、終了するまで待つ。
      * スレッドとして起動
      */
-    void work(Parameter parameter);
+    void work();
 
     /*
      * @brief オプティカルフローの処理結果をNode.js側に通知する
@@ -63,12 +69,11 @@ namespace tidalwave {
 
     std::vector<Consumer *> consumers;
 
-    Report report;
-    int callback_count;
+    Parameter param;
+    bool isRunning;
 
-    WorkData workData;
     uv_work_t workDataContainer;
-    Observer<Response, std::string, Report> *emitter;
+    Observer<Response, std::string> *emitter;
   };
 }
 #endif // MANAGER_H

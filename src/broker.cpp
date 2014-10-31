@@ -8,7 +8,7 @@ using namespace node;
 using namespace std;
 
 namespace tidalwave {
-  Manager *Broker::dispatcher;
+  Manager *Broker::manager;
   Broker *Broker::broker;
 
   static Persistent<String> STATUS_SYMBOL = NODE_PSYMBOL("status");
@@ -50,12 +50,12 @@ namespace tidalwave {
     node::MakeCallback(this->handle_, "emit", argc, argv);
   };
 
-  void Broker::onError(const string &reason) {
+  void Broker::onError(const string &err) {
     HandleScope scope;
 
     Local<Object> result = Object::New();
     result->Set(STATUS_SYMBOL, String::New("ERROR"));
-    result->Set(REASON_SYMBOL, String::New(reason.c_str()));
+    result->Set(REASON_SYMBOL, String::New(err.c_str()));
 
     const unsigned argc = 2;
     Local<Value> argv[argc] = {
@@ -65,17 +65,12 @@ namespace tidalwave {
     node::MakeCallback(this->handle_, "emit", argc, argv);
   }
 
-  void Broker::onCompleted(const Report &report) {
+  void Broker::onCompleted() {
     HandleScope scope;
 
-    Local<Object> result = Object::New();
-    result->Set(TOTAL_SYMBOL, Integer::New(report.total));
-    result->Set(REPORTED_SYMBOL, Integer::New(report.reported));
-
-    const unsigned argc = 2;
+    const unsigned argc = 1;
     Local<Value> argv[argc] = {
-        String::New("finish"),
-        Local<Value>::New(result)
+        String::New("finish")
     };
     node::MakeCallback(this->handle_, "emit", argc, argv);
   };
@@ -89,42 +84,12 @@ namespace tidalwave {
 
   Handle<Value> Broker::createInstance(const Arguments &args) {
     HandleScope scope;
-
-    Broker::broker = new Broker();
-    Broker::dispatcher = new Manager(Broker::broker);
-    broker->Wrap(args.This());
-    return args.This();
-  };
-
-  Handle<Value> Broker::requestFromClient(const Arguments &args) {
-    HandleScope scope;
-
-    if (args.Length() < 2) {
-      ThrowException(Exception::TypeError(String::New("2 arguments expected")));
-      return scope.Close(Undefined());
-    }
-
-    if (!args[0]->IsString()) {
-      ThrowException(Exception::TypeError(String::New("Wrong arguments(expect_path)")));
-      return scope.Close(Undefined());
-    }
-    if (!args[1]->IsString()) {
-      ThrowException(Exception::TypeError(String::New("Wrong arguments(target_path)")));
-      return scope.Close(Undefined());
-    }
-
-    v8::String::Utf8Value param1(args[0]->ToString());
-    v8::String::Utf8Value param2(args[1]->ToString());
-
-    string expect_path = string(*param1);
-    string target_path = string(*param2);
-
     Parameter param;
-    param.expect_path = expect_path;
-    param.target_path = target_path;
 
     param.threshold = getNumberOrDefault(args[2], "threshold", 5.0);
     param.span = getInt32OrDefault(args[2], "span", 10);
+
+    param.numThreads = getInt32OrDefault(args[2], "numThreads", 4);
 
     param.optParam.pyrScale = getNumberOrDefault(args[2], "pyrScale", 0.5);
     param.optParam.pyrLevels = getInt32OrDefault(args[2], "pyrLevels", 3);
@@ -134,7 +99,36 @@ namespace tidalwave {
     param.optParam.polySigma = getNumberOrDefault(args[2], "polySigma", 1.5);
     param.optParam.flags = getInt32OrDefault(args[2], "flags", 256); // cv::OPTFLOW_FARNEBACK_GAUSSIAN
 
-    Broker::dispatcher->request(param);
+    Broker::broker = new Broker();
+    Broker::manager = new Manager(Broker::broker);
+    Broker::manager->start(param);
+
+    broker->Wrap(args.This());
+    return args.This();
+  };
+
+  Handle<Value> Broker::requestFromClient(const Arguments &args) {
+    HandleScope scope;
+    if (args.Length() != 2) {
+      ThrowException(Exception::TypeError(String::New("2 arguments expected")));
+      return scope.Close(Undefined());
+    }
+
+    if (!args[0]->IsString()) {
+      ThrowException(Exception::TypeError(String::New("Wrong arguments(expect_image)")));
+      return scope.Close(Undefined());
+    }
+    if (!args[1]->IsString()) {
+      ThrowException(Exception::TypeError(String::New("Wrong arguments(target_image)")));
+      return scope.Close(Undefined());
+    }
+    v8::String::Utf8Value param1(args[0]->ToString());
+    v8::String::Utf8Value param2(args[1]->ToString());
+
+    string expect_image = string(*param1);
+    string target_image = string(*param2);
+
+    Broker::manager->request(expect_image, target_image);
 
     return scope.Close(Undefined());
   };

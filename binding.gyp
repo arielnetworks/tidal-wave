@@ -6,9 +6,7 @@
         "src/main.cpp",
         "src/broker.cpp",
         "src/opticalflow.cpp",
-        "src/utility.cpp",
         "src/manager.cpp",
-        "src/producer.cpp",
         "src/consumer.cpp",
         "src/thread.cpp"
       ],

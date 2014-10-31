@@ -1,54 +1,34 @@
-var express = require('express'),
-    http = require('http'),
-    io = require('socket.io')
-    app = express();
+var EventEmitter = require('events').EventEmitter,
+    OpticalFlow = require('./build/Release/opticalflow').OpticalFlow,
+    globy = require('globy'),
+    _ = require('underscore');
+var path = require("path");
+_.str = require('underscore.string');
+_.mixin(_.str.exports());
 
-var OpticalFlow = require('./opticalflow.js');
+OpticalFlow.prototype.__proto__ = EventEmitter.prototype;
 
-var server = http.createServer(app);
-server.listen(process.env.PORT || 5001);
+OpticalFlow.prototype.calcAll = function (expect_dir, target_dir) {
 
-app.use(express.static(__dirname + '/public'));
+    if (!_.endsWith(expect_dir, '/')) {
+        expect_dir += '/';
+    }
+    if (!_.endsWith(target_dir, '/')) {
+        target_dir += '/';
+    }
 
+    var target_files = globy.glob(target_dir + '**/*.png');
 
-var socket = io.listen(server);
-var opticalflow = new OpticalFlow();
-var busy = false;
+    var self = this;
 
-socket.on('connection', function(client) {
-  console.log('connection');
-  if(busy) {
-    console.log("busy!!!!!!");
-    client.disconnect();
-    return;
-  }
-  busy = true;
-
-  client.on('message', function(data) {
-    console.log(data);
-    var onMessage = function(msg) {
-      //console.log("message vector length: " + msg.vector.length);
-      console.log(msg);
-      client.send(msg);
-    };
-    opticalflow.on('message', onMessage);
-    opticalflow.on('error', function(err) {
-      console.log("error!!");
-      console.log(err);
-      client.emit('error', err);
+    _.each(target_files, function(target_file){
+      var expected_file = target_file.replace(target_dir, expect_dir);
+      if (path.existsSync(expected_file)) {
+        self.calc(expected_file, target_file);
+      }
     });
-    opticalflow.once('finish', function(report) {
-      console.log("finish!!");
-      console.log(report);
-      client.emit('finish', report);
-      client.disconnect();
-      busy = false;
-      opticalflow.removeListener('message', onMessage);
-    });
-    opticalflow.calc(
-      data.expect_path,
-      data.target_path,
-      data.options
-    );
-  });
-});
+};
+
+
+module.exports = OpticalFlow;
+
