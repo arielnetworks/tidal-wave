@@ -8,9 +8,6 @@ using namespace node;
 using namespace std;
 
 namespace tidalwave {
-  Manager *Broker::manager;
-  Broker *Broker::broker;
-
   static Persistent<String> STATUS_SYMBOL = NODE_PSYMBOL("status");
   static Persistent<String> REASON_SYMBOL = NODE_PSYMBOL("reason");
   static Persistent<String> SPAN_SYMBOL = NODE_PSYMBOL("span");
@@ -23,18 +20,20 @@ namespace tidalwave {
   static Persistent<String> DX_SYMBOL = NODE_PSYMBOL("dx");
   static Persistent<String> DY_SYMBOL = NODE_PSYMBOL("dy");
   static Persistent<String> VECTOR_SYMBOL = NODE_PSYMBOL("vector");
-  static Persistent<String> TOTAL_SYMBOL = NODE_PSYMBOL("total");
-  static Persistent<String> REPORTED_SYMBOL = NODE_PSYMBOL("reported");
 
   void Broker::initialize(Handle<Object> &target) {
     Local<FunctionTemplate> clazz = FunctionTemplate::New(Broker::createInstance);
-    clazz->SetClassName(String::NewSymbol("OpticalFlow"));
+    clazz->SetClassName(String::NewSymbol("TidalWave"));
     clazz->InstanceTemplate()->SetInternalFieldCount(1);
     clazz->PrototypeTemplate()->Set(
         String::NewSymbol("calc"),
-        FunctionTemplate::New(Broker::requestFromClient)->GetFunction()
+        FunctionTemplate::New(Broker::requestCalc)->GetFunction()
     );
-    target->Set(String::NewSymbol("OpticalFlow"), clazz->GetFunction());
+    clazz->PrototypeTemplate()->Set(
+        String::NewSymbol("dispose"),
+        FunctionTemplate::New(Broker::requestDispose)->GetFunction()
+    );
+    target->Set(String::NewSymbol("TidalWave"), clazz->GetFunction());
   };
 
   void Broker::onNext(const Response &value) {
@@ -44,7 +43,7 @@ namespace tidalwave {
     // 結果をコールバック
     const unsigned argc = 2;
     Local<Value> argv[argc] = {
-        String::New("message"),
+        String::New("data"),
         Local<Value>::New(result)
     };
     node::MakeCallback(this->handle_, "emit", argc, argv);
@@ -75,39 +74,44 @@ namespace tidalwave {
     node::MakeCallback(this->handle_, "emit", argc, argv);
   };
 
-  Broker::Broker()
+  Broker::Broker(Parameter param)
       : ObjectWrap() {
+    manager = new Manager(this);
+    manager->start(param);
   };
 
   Broker::~Broker() {
+    if (manager->isRunning) {
+      manager->stop();
+    }
+    delete manager;
   };
 
   Handle<Value> Broker::createInstance(const Arguments &args) {
     HandleScope scope;
     Parameter param;
 
-    param.threshold = getNumberOrDefault(args[2], "threshold", 5.0);
-    param.span = getInt32OrDefault(args[2], "span", 10);
+    Local<Value> arg = args[0];
+    param.threshold = getNumberOrDefault(arg, "threshold", 5.0);
+    param.span = getInt32OrDefault(arg, "span", 10);
 
-    param.numThreads = getInt32OrDefault(args[2], "numThreads", 4);
+    param.numThreads = getInt32OrDefault(arg, "numThreads", 4);
 
-    param.optParam.pyrScale = getNumberOrDefault(args[2], "pyrScale", 0.5);
-    param.optParam.pyrLevels = getInt32OrDefault(args[2], "pyrLevels", 3);
-    param.optParam.winSize = getInt32OrDefault(args[2], "winSize", 30);
-    param.optParam.pyrIterations = getInt32OrDefault(args[2], "pyrIterations", 3);
-    param.optParam.polyN = getInt32OrDefault(args[2], "polyN", 7);
-    param.optParam.polySigma = getNumberOrDefault(args[2], "polySigma", 1.5);
-    param.optParam.flags = getInt32OrDefault(args[2], "flags", 256); // cv::OPTFLOW_FARNEBACK_GAUSSIAN
+    param.optParam.pyrScale = getNumberOrDefault(arg, "pyrScale", 0.5);
+    param.optParam.pyrLevels = getInt32OrDefault(arg, "pyrLevels", 3);
+    param.optParam.winSize = getInt32OrDefault(arg, "winSize", 30);
+    param.optParam.pyrIterations = getInt32OrDefault(arg, "pyrIterations", 3);
+    param.optParam.polyN = getInt32OrDefault(arg, "polyN", 7);
+    param.optParam.polySigma = getNumberOrDefault(arg, "polySigma", 1.5);
+    param.optParam.flags = getInt32OrDefault(arg, "flags", 256); // cv::OPTFLOW_FARNEBACK_GAUSSIAN
 
-    Broker::broker = new Broker();
-    Broker::manager = new Manager(Broker::broker);
-    Broker::manager->start(param);
+    Broker *broker = new Broker(param);
 
     broker->Wrap(args.This());
     return args.This();
   };
 
-  Handle<Value> Broker::requestFromClient(const Arguments &args) {
+  Handle<Value> Broker::requestCalc(const Arguments &args) {
     HandleScope scope;
     if (args.Length() != 2) {
       ThrowException(Exception::TypeError(String::New("2 arguments expected")));
@@ -128,7 +132,16 @@ namespace tidalwave {
     string expect_image = string(*param1);
     string target_image = string(*param2);
 
-    Broker::manager->request(expect_image, target_image);
+    Broker *self = ObjectWrap::Unwrap<Broker>(args.This());
+    self->manager->request(expect_image, target_image);
+
+    return scope.Close(Undefined());
+  };
+
+  Handle<Value> Broker::requestDispose(const Arguments &args) {
+    HandleScope scope;
+    Broker *self = ObjectWrap::Unwrap<Broker>(args.This());
+    self->manager->stop();
 
     return scope.Close(Undefined());
   };

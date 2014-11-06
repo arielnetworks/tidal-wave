@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "opticalflow",
+      "target_name": "tidalwave",
       "sources": [ 
         "src/main.cpp",
         "src/broker.cpp",

@@ -46,7 +46,7 @@ namespace tidalwave {
     virtual void onCompleted();
 
   private:
-    Broker();
+    Broker(Parameter param);
 
     virtual ~Broker();
 
@@ -58,7 +58,9 @@ namespace tidalwave {
     /*
      * @brief Node.jsからのリクエストをさばく
      */
-    static v8::Handle<v8::Value> requestFromClient(const v8::Arguments &args);
+    static v8::Handle<v8::Value> requestCalc(const v8::Arguments &args);
+
+    static v8::Handle<v8::Value> requestDispose(const v8::Arguments &args);
 
     /*
      * @brief C++側の処理結果をNode.jsで扱える形式に変換する
@@ -69,9 +71,7 @@ namespace tidalwave {
 
     static double getNumberOrDefault(const v8::Local<v8::Value> &arg, const std::string &name, double defaultValue);
 
-    // この2つのインスタンスはプログラムが終了するまで解放しない
-    static Broker *broker;
-    static Manager *manager;
+    Manager *manager;
 
   };
 }

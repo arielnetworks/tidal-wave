@@ -20,6 +20,7 @@ namespace tidalwave {
   class Manager {
   public:
     Manager(Observer<Response, std::string> *emitter);
+    virtual ~Manager();
 
     /*
      * @brief スレッドを立ち上げてリクエストを受付可能状態にする
@@ -59,6 +60,7 @@ namespace tidalwave {
 
     static void finishHandler(uv_work_t *req, int status);
 
+    bool isRunning;
   private:
     uv_async_t async;
 
@@ -70,9 +72,10 @@ namespace tidalwave {
     std::vector<Consumer *> consumers;
 
     Parameter param;
-    bool isRunning;
 
     uv_work_t workDataContainer;
+
+    // 参照を持ってるだけなので解放しなくてよい。
     Observer<Response, std::string> *emitter;
   };
 }

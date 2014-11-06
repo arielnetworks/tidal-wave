@@ -10,4 +10,4 @@ void init(Handle<Object> target) {
   Broker::initialize(target);
 }
 
-NODE_MODULE(opticalflow, init)
+NODE_MODULE(tidalwave, init)
