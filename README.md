@@ -7,6 +7,7 @@
 ## なにするもの？
 
 ![処理の流れ](http://legion.ariel-networks.com/gitbucket/leviathan/tidal-wave/blob/master/flow.png?raw=true)
+![シーケンス図](http://legion.ariel-networks.com/gitbucket/leviathan/tidal-wave/blob/master/tidalwave-sequence.png?raw=true)
 
 ## 必要なもの
 
