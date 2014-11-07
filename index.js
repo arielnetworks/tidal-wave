@@ -25,7 +25,7 @@ function calcAll(tidalwave, expect_dir, target_dir) {
     globEnded = true;
   });
   stream.on('data', function(target) {
-    var file = target.path.substr(target.base);
+    var file = target.path.substr(target.base.length);
     var expected_file = Path.resolve(expect_dir, file);
     Path.exists(expected_file, function(exists) {
       tidalwave.calc(expected_file, target.path);
