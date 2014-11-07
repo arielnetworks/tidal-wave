@@ -17,14 +17,19 @@ function create(expect_dir, target_dir, options) {
 }
 
 function calcAll(tidalwave, expect_dir, target_dir) {
+  var fileExists = false;
   var globEnded = false;
   var requested = 0;
 
   var stream = glob.create(Path.resolve(target_dir, '**/*.*'));
   stream.once('end', function() {
     globEnded = true;
+    if (!fileExists) {
+      tidalwave.dispose();
+    }
   });
   stream.on('data', function(target) {
+    fileExists = true;
     var file = target.path.substr(target.base.length);
     var expected_file = Path.resolve(expect_dir, file);
     Path.exists(expected_file, function(exists) {
