@@ -19,7 +19,7 @@ namespace tidalwave {
    */
   class Manager {
   public:
-    Manager(Observer<Response, std::string> *emitter);
+    Manager(Observer<Response, std::string, Report> *emitter);
     virtual ~Manager();
 
     /*
@@ -72,11 +72,12 @@ namespace tidalwave {
     std::vector<Consumer *> consumers;
 
     Parameter param;
+    Report report;
 
     uv_work_t workDataContainer;
 
     // 参照を持ってるだけなので解放しなくてよい。
-    Observer<Response, std::string> *emitter;
+    Observer<Response, std::string, Report> *emitter;
   };
 }
 #endif // MANAGER_H

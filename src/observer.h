@@ -7,14 +7,14 @@
 #include <opencv2/core/core.hpp>
 
 namespace tidalwave {
-  template<typename TValue, typename TError>
+  template<typename TValue, typename TError, typename TReport>
   class Observer {
   public:
     virtual void onNext(const TValue &value) = 0;
 
     virtual void onError(const TError &err) = 0;
 
-    virtual void onCompleted() = 0;
+    virtual void onCompleted(const TReport &report) = 0;
   };
 }
 #endif // OBSERVER_H

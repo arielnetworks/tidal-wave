@@ -16,7 +16,7 @@ using namespace std;
 
 namespace tidalwave {
 
-  Manager::Manager(Observer<Response, string> *emitter)
+  Manager::Manager(Observer<Response, string, Report> *emitter)
       : isRunning(true),
         async(),
         requestQueue(),
@@ -24,6 +24,7 @@ namespace tidalwave {
         messageBuffer(),
         errorBuffer(),
         consumers(),
+        report(),
         emitter(emitter) {
 
   }
@@ -72,6 +73,7 @@ namespace tidalwave {
     req.threshold = param.threshold;
     std::cout << "request: " << expect_image << " <-> " << target_image << endl;
     requestQueue.push(req);
+    report.requestCount++;
     return 0;
   }
 
@@ -105,14 +107,17 @@ namespace tidalwave {
       Response res_buf = *it;
 
       if (res_buf.status == "ERROR") {
+        report.errorCount++;
         emitter->onError(res_buf.reason);
       } else {
+        report.dataCount++;
         emitter->onNext(res_buf);
       }
     }
 
     vector<string> errors = errorBuffer.popAll();
     for (vector<string>::iterator it = errors.begin(); it != errors.end(); it++) {
+      report.errorCount++;
       string reason = *it;
       emitter->onError(reason);
     }
@@ -122,7 +127,7 @@ namespace tidalwave {
   // すべての処理が完了した時に呼び出される
   void Manager::finish() {
     // Node.js側に終了のコールバック
-    emitter->onCompleted();
+    emitter->onCompleted(report);
 
     uv_close((uv_handle_t *) &async, NULL);
   }
@@ -133,8 +138,8 @@ namespace tidalwave {
   }
 
   void Manager::notifyHandler(uv_async_t *handle, int status) {
-    Manager &self = *static_cast<Manager *>(handle->data);
-    self.notify();
+    Manager &manager = *static_cast<Manager *>(handle->data);
+    manager.notify();
   }
 
   void Manager::finishHandler(uv_work_t *req, int status) {

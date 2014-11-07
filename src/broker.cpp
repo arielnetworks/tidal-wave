@@ -20,6 +20,9 @@ namespace tidalwave {
   static Persistent<String> DX_SYMBOL = NODE_PSYMBOL("dx");
   static Persistent<String> DY_SYMBOL = NODE_PSYMBOL("dy");
   static Persistent<String> VECTOR_SYMBOL = NODE_PSYMBOL("vector");
+  static Persistent<String> REQUEST_COUNT_SYMBOL = NODE_PSYMBOL("request");
+  static Persistent<String> DATA_COUNT_SYMBOL = NODE_PSYMBOL("data");
+  static Persistent<String> ERROR_COUNT_SYMBOL = NODE_PSYMBOL("error");
 
   void Broker::initialize(Handle<Object> &target) {
     Local<FunctionTemplate> clazz = FunctionTemplate::New(Broker::createInstance);
@@ -64,12 +67,18 @@ namespace tidalwave {
     node::MakeCallback(this->handle_, "emit", argc, argv);
   }
 
-  void Broker::onCompleted() {
+  void Broker::onCompleted(const Report &report) {
     HandleScope scope;
 
-    const unsigned argc = 1;
+    Local<Object> result = Object::New();
+    result->Set(REQUEST_COUNT_SYMBOL, Integer::New(report.requestCount));
+    result->Set(DATA_COUNT_SYMBOL, Integer::New(report.dataCount));
+    result->Set(ERROR_COUNT_SYMBOL, Integer::New(report.errorCount));
+
+    const unsigned argc = 2;
     Local<Value> argv[argc] = {
-        String::New("finish")
+        String::New("finish"),
+        Local<Value>::New(result)
     };
     node::MakeCallback(this->handle_, "emit", argc, argv);
   };

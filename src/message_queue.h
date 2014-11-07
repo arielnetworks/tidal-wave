@@ -39,6 +39,12 @@ namespace tidalwave {
     std::string reason;
   };
 
+  struct Report {
+    int requestCount;
+    int dataCount;
+    int errorCount;
+  };
+
   template<typename T>
   class MessageQueue {
 

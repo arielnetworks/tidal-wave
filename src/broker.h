@@ -19,7 +19,7 @@ namespace tidalwave {
   /*
    * @brief Node.jsとC++の世界を仲介するクラス
    */
-  class Broker : public node::ObjectWrap, public Observer<Response, std::string> {
+  class Broker : public node::ObjectWrap, public Observer<Response, std::string, Report> {
   public:
 
     /*
@@ -43,7 +43,7 @@ namespace tidalwave {
     /*
      * @brief C++からNode.jsにすべての処理が完了したことを通知する
      */
-    virtual void onCompleted();
+    virtual void onCompleted(const Report &report);
 
   private:
     Broker(Parameter param);
