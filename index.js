@@ -1,38 +1,45 @@
 var EventEmitter = require('events').EventEmitter,
   TidalWave = require('./build/Release/tidalwave').TidalWave,
-  globy = require('globy'),
-  _ = require('underscore');
-var path = require("path");
-_.str = require('underscore.string');
-_.mixin(_.str.exports());
-
+  glob = require('glob-stream'),
+  Path = require('path');
 TidalWave.prototype.__proto__ = EventEmitter.prototype;
 
-TidalWave.prototype.calcAll = function (expect_dir, target_dir) {
 
-  if (!_.endsWith(expect_dir, '/')) {
-    expect_dir += '/';
-  }
-  if (!_.endsWith(target_dir, '/')) {
-    target_dir += '/';
-  }
 
-  var target_files = globy.glob(target_dir + '**/*.*');
+module.exports.create = create;
 
-  var self = this;
 
-  var count = 0;
-  _.each(target_files, function (target_file) {
-    var expected_file = target_file.replace(target_dir, expect_dir);
-    if (path.existsSync(expected_file)) {
-      self.calc(expected_file, target_file);
-      count++;
-    }
+
+function create(expect_dir, target_dir, options) {
+  var t = new TidalWave(options);
+  calcAll(t, expect_dir, target_dir);
+  return t;
+}
+
+function calcAll(tidalwave, expect_dir, target_dir) {
+  var globEnded = false;
+  var requested = 0;
+
+  var stream = glob.create(Path.resolve(target_dir, '**/*.*'));
+  stream.once('end', function() {
+    globEnded = true;
+  });
+  stream.on('data', function(target) {
+    var file = target.path.substr(target.base.length);
+    var expected_file = Path.resolve(expect_dir, file);
+    Path.exists(expected_file, function(exists) {
+      tidalwave.calc(expected_file, target.path);
+      requested++;
+    });
   });
 
-  return count;
-};
+  tidalwave.on('data', function() {
+    if (globEnded && --requested <= 0) {
+      tidalwave.dispose();
+    }
+  });
+  tidalwave.on('error', function() {
+    requested--;
+  });
 
-
-module.exports = TidalWave;
-
+}
