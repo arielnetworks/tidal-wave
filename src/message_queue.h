@@ -84,7 +84,6 @@ namespace tidalwave {
     }
 
     void stop() {
-      std::cout << "stop queue" << std::endl;
       isRunning = false;
       uv_cond_broadcast(&notifier);
     }

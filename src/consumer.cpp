@@ -52,6 +52,7 @@ namespace tidalwave {
 
         // OpticalFlowを実行
         OpticalFlowStatus status = opticalFlow->calculate(req.expect_image, req.target_image, parameter, flowx, flowy);
+        cout << "finish optical flow: " << status.time << endl;
 
         // 解析結果をレスポンスキューに入れる
         Response res;
@@ -79,7 +80,6 @@ namespace tidalwave {
           res.target_image = req.target_image;
           res.span = req.span;
           res.threshold = req.threshold;
-          cout << "finish optical flow: " << status.time << endl;
         } else {
           res.status = "ERROR";
           res.reason = status.message;

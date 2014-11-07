@@ -37,12 +37,11 @@ namespace tidalwave {
   }
 
   int Manager::start(const Parameter &param) {
-    cout << "=== start consumer-producer test ===" << endl;
-
+    this->param = param;
     requestQueue.reset();
     responseQueue.reset();
 
-    // asyncを使って通知するとonNextHandleが呼ばれる
+    // asyncを使って通知するとnotifyHandlerが呼ばれる
     uv_async_init(uv_default_loop(), &async, notifyHandler);
     async.data = (void *) this;
 
@@ -51,10 +50,7 @@ namespace tidalwave {
     // workHandleを別スレッドで実行。完了したらfinishHandlerが呼ばれる
     uv_queue_work(uv_default_loop(), &workDataContainer, workHandler, finishHandler);
 
-    cout << "=== end consumer-producer test ===" << endl;
-
     // ConsumerThreadの生成
-    // Dispatcherのインスタンスは最後まで解放されないので、ここでつくったConsumerのインスタンスも解放しない。
     for (int i = 0; i < param.numThreads; i++) {
       Consumer *cons = new Consumer(i, requestQueue, responseQueue);
       cons->start(param.optParam);
@@ -76,8 +72,6 @@ namespace tidalwave {
     req.threshold = param.threshold;
     std::cout << "request: " << expect_image << " <-> " << target_image << endl;
     requestQueue.push(req);
-    cout << "=== end consumer-producer test ===" << endl;
-
     return 0;
   }
 
@@ -99,7 +93,6 @@ namespace tidalwave {
       Consumer *cons = *it;
       cons->stop();
     }
-    cout << "Manager::work is finished." << endl;
   }
 
   // Node.js側のコールバック関数を呼び出してオプティカルフローの計算結果を通知する
@@ -107,7 +100,6 @@ namespace tidalwave {
   void Manager::notify() {
     HandleScope scope;
 
-    cout << "onNext!" << endl;
     vector<Response> responses = messageBuffer.popAll();
     for (vector<Response>::iterator it = responses.begin(); it != responses.end(); it++) {
       Response res_buf = *it;
@@ -129,7 +121,6 @@ namespace tidalwave {
 
   // すべての処理が完了した時に呼び出される
   void Manager::finish() {
-    cout << "Manager::finish" << endl;
     // Node.js側に終了のコールバック
     emitter->onCompleted();
 
@@ -139,17 +130,14 @@ namespace tidalwave {
   void Manager::workHandler(uv_work_t *req) {
     Manager &manager = *static_cast<Manager *>(req->data);
     manager.work();
-    cout << "Manager::workHandler is finished." << endl;
   }
 
   void Manager::notifyHandler(uv_async_t *handle, int status) {
-    cout << "notify handler..." << endl;
     Manager &self = *static_cast<Manager *>(handle->data);
     self.notify();
   }
 
   void Manager::finishHandler(uv_work_t *req, int status) {
-    cout << "finish handler..." << endl;
     Manager &manager = *static_cast<Manager *>(req->data);
     manager.finish();
   }
