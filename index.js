@@ -1,7 +1,8 @@
 var EventEmitter = require('events').EventEmitter,
   TidalWave = require('./build/Release/tidalwave').TidalWave,
   glob = require('glob-stream'),
-  Path = require('path');
+  Path = require('path'),
+  FS = require('fs');
 TidalWave.prototype.__proto__ = EventEmitter.prototype;
 
 
@@ -45,7 +46,7 @@ function calcAll(tidalwave, target_dir, getExpectedPath) {
     fileExists = true;
     var shortPath = Path.relative(target.base, target.path);
     var expected_file = getExpectedPath.call(this, shortPath);
-    Path.exists(expected_file, function(exists) {
+    FS.exists(expected_file, function(exists) {
       tidalwave.calc(expected_file, target.path);
       requested++;
     });
