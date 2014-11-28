@@ -46,10 +46,19 @@ function calcAll(tidalwave, target_dir, getExpectedPath) {
     fileExists = true;
     var shortPath = Path.relative(target.base, target.path);
     var expected_file = getExpectedPath.call(this, shortPath);
-    FS.exists(expected_file, function(exists) {
-      tidalwave.calc(expected_file, target.path);
-      requested++;
-    });
+    if (!expected_file) {
+      return;
+    } else if (typeof expected_file === 'string') {
+      calcIfExists(expected_file)
+    } else if (typeof expected_file.then === 'function') {
+      expected_file.then(calcIfExists);
+    }
+    function calcIfExists(expected_file) {
+      FS.exists(expected_file, function(exists) {
+        tidalwave.calc(expected_file, target.path);
+        requested++;
+      });
+    }
   });
 
   tidalwave.on('data', function() {
