@@ -10,13 +10,26 @@ module.exports.create = create;
 
 
 
-function create(expect_dir, target_dir, options) {
+function create(target_dir, options) {
   var t = new TidalWave(options);
-  calcAll(t, expect_dir, target_dir);
+  options = options || {};
+
+  var getExpectedPath;
+  if (typeof options.expect_dir === 'string') {
+    getExpectedPath = function(shortPath) {
+      return Path.resolve(options.expect_dir, shortPath);
+    };
+  } else if (typeof options.getExpectedPath === 'function') {
+    getExpectedPath = options.getExpectedPath;
+  } else {
+    throw new Error('You must pass "expect_dir" or "getExpectedPath" as an option.');
+  }
+
+  calcAll(t, target_dir, getExpectedPath);
   return t;
 }
 
-function calcAll(tidalwave, expect_dir, target_dir) {
+function calcAll(tidalwave, target_dir, getExpectedPath) {
   var fileExists = false;
   var globEnded = false;
   var requested = 0;
@@ -30,8 +43,8 @@ function calcAll(tidalwave, expect_dir, target_dir) {
   });
   stream.on('data', function(target) {
     fileExists = true;
-    var file = Path.relative(target.base, target.path);
-    var expected_file = Path.resolve(expect_dir, file);
+    var shortPath = Path.relative(target.base, target.path);
+    var expected_file = getExpectedPath.call(this, shortPath);
     Path.exists(expected_file, function(exists) {
       tidalwave.calc(expected_file, target.path);
       requested++;
