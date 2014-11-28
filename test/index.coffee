@@ -10,7 +10,7 @@ describe "TidalWave", ->
   @timeout 3 * 1000
 
   it "should report nothing on \"revision1\"", (done) ->
-    t = create("revision1")
+    t = createWithExpectDir("revision1")
     t.on "data", (data) ->
       delete data.time
       if ~data.target_image.indexOf("capture1")
@@ -38,7 +38,7 @@ describe "TidalWave", ->
       done()
 
   it "should report something on \"revision2\"", (done) ->
-    t = create("revision2")
+    t = createWithExpectDir("revision2")
     t.on "data", (data) ->
       delete data.time
       if ~data.target_image.indexOf("capture1")
@@ -88,15 +88,30 @@ describe "TidalWave", ->
       done()
 
   it "should never report on \"__NOT_EXISTS__\"", (done) ->
-    t = create("__NOT_EXISTS__")
+    t = createWithExpectDir("__NOT_EXISTS__")
     t.on "data", (data) ->
       assert.fail "boom."
     t.on "finish", (report) ->
       assert.deepEqual report, { request: 0, data: 0, error: 0 }
       done()
 
-create = (revisionBaseDir)->
+  it "should start with passing 'getExpectedPath' option", (done) ->
+    counter = 0
+    t = TidalWave.create(
+      Path.resolve(__dirname, "./fixture/revision2"), {
+        getExpectedPath: (shortPath)->
+          return Path.resolve(__dirname, "./fixture/revision1", shortPath)
+      })
+    t.on "data", (data) -> counter++
+    t.on "finish", (report) ->
+      assert.equal counter, 2
+      assert.deepEqual report, { request: 2, data: 2, error: 0 }
+      done()
+
+createWithExpectDir = (revisionBaseDir)->
   TidalWave.create(
-      Path.resolve(__dirname, "./fixture/expected"),
-      Path.resolve(__dirname, "./fixture/#{revisionBaseDir}"))
+      Path.resolve(__dirname, "./fixture/#{revisionBaseDir}"),
+      {
+        expectDir: Path.resolve(__dirname, "./fixture/expected")
+      })
 
