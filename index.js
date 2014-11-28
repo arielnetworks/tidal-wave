@@ -30,7 +30,7 @@ function calcAll(tidalwave, expect_dir, target_dir) {
   });
   stream.on('data', function(target) {
     fileExists = true;
-    var file = target.path.substr(target.base.length);
+    var file = Path.relative(target.base, target.path);
     var expected_file = Path.resolve(expect_dir, file);
     Path.exists(expected_file, function(exists) {
       tidalwave.calc(expected_file, target.path);
