@@ -112,6 +112,6 @@ createWithExpectDir = (revisionBaseDir)->
   TidalWave.create(
       Path.resolve(__dirname, "./fixture/#{revisionBaseDir}"),
       {
-        expect_dir: Path.resolve(__dirname, "./fixture/expected")
+        expectDir: Path.resolve(__dirname, "./fixture/expected")
       })
 

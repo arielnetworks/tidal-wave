@@ -11,31 +11,31 @@ module.exports.create = create;
 
 
 
-function create(target_dir, options) {
+function create(targetDir, options) {
   var t = new TidalWave(options);
   options = options || {};
 
   var getExpectedPath;
-  if (typeof options.expect_dir === 'string') {
+  if (typeof options.expectDir === 'string') {
     getExpectedPath = function(shortPath) {
-      return Path.resolve(options.expect_dir, shortPath);
+      return Path.resolve(options.expectDir, shortPath);
     };
   } else if (typeof options.getExpectedPath === 'function') {
     getExpectedPath = options.getExpectedPath;
   } else {
-    throw new Error('You must pass "expect_dir" or "getExpectedPath" as an option.');
+    throw new Error('An option must have "expectDir" or "getExpectedPath" property.');
   }
 
-  calcAll(t, target_dir, getExpectedPath);
+  calcAll(t, targetDir, getExpectedPath);
   return t;
 }
 
-function calcAll(tidalwave, target_dir, getExpectedPath) {
+function calcAll(tidalwave, targetDir, getExpectedPath) {
   var fileExists = false;
   var globEnded = false;
   var requested = 0;
 
-  var stream = glob.create(Path.resolve(target_dir, '**/*.*'));
+  var stream = glob.create(Path.resolve(targetDir, '**/*.*'));
   stream.once('end', function() {
     globEnded = true;
     if (!fileExists) {
@@ -45,17 +45,17 @@ function calcAll(tidalwave, target_dir, getExpectedPath) {
   stream.on('data', function(target) {
     fileExists = true;
     var shortPath = Path.relative(target.base, target.path);
-    var expected_file = getExpectedPath.call(this, shortPath);
-    if (!expected_file) {
+    var expectedFile = getExpectedPath.call(this, shortPath);
+    if (!expectedFile) {
       return;
-    } else if (typeof expected_file === 'string') {
-      calcIfExists(expected_file)
-    } else if (typeof expected_file.then === 'function') {
-      expected_file.then(calcIfExists);
+    } else if (typeof expectedFile === 'string') {
+      calcIfExists(expectedFile)
+    } else if (typeof expectedFile.then === 'function') {
+      expectedFile.then(calcIfExists);
     }
-    function calcIfExists(expected_file) {
-      FS.exists(expected_file, function(exists) {
-        tidalwave.calc(expected_file, target.path);
+    function calcIfExists(expectedFile) {
+      FS.exists(expectedFile, function(exists) {
+        tidalwave.calc(expectedFile, target.path);
         requested++;
       });
     }
