@@ -1,4 +1,4 @@
-# tidal-wave
+# tidal-wave [![Build Status](https://travis-ci.org/arielnetworks/tidal-wave.svg)](https://travis-ci.org/arielnetworks/tidal-wave)
 
 並列実行で小さなflowをたくさんつくり、大きな津波を発生させるWebサービス。
 
