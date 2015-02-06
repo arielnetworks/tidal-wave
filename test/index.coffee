@@ -18,8 +18,8 @@ describe "TidalWave", ->
           status: 'OK',
           span: 10,
           threshold: 5,
-          expect_image: '/home/pig/git/tidal-wave/test/fixture/expected/scenario1/capture1.jpg',
-          target_image: '/home/pig/git/tidal-wave/test/fixture/revision1/scenario1/capture1.jpg',
+          expect_image: Path.join(__dirname, 'fixture/expected/scenario1/capture1.jpg'),
+          target_image: Path.join(__dirname, 'fixture/revision1/scenario1/capture1.jpg'),
           vector: []
         }
       else if ~data.target_image.indexOf("capture2")
@@ -27,8 +27,8 @@ describe "TidalWave", ->
           status: 'OK',
           span: 10,
           threshold: 5,
-          expect_image: '/home/pig/git/tidal-wave/test/fixture/expected/scenario2/capture2.png',
-          target_image: '/home/pig/git/tidal-wave/test/fixture/revision1/scenario2/capture2.png',
+          expect_image: Path.join(__dirname, 'fixture/expected/scenario2/capture2.png'),
+          target_image: Path.join(__dirname, 'fixture/revision1/scenario2/capture2.png'),
           vector: []
         }
       else
@@ -46,16 +46,16 @@ describe "TidalWave", ->
           status: 'OK',
           span: 10,
           threshold: 5,
-          expect_image: '/home/pig/git/tidal-wave/test/fixture/expected/scenario1/capture1.jpg',
-          target_image: '/home/pig/git/tidal-wave/test/fixture/revision2/scenario1/capture1.jpg',
+          expect_image: Path.join(__dirname, 'fixture/expected/scenario1/capture1.jpg'),
+          target_image: Path.join(__dirname, 'fixture/revision2/scenario1/capture1.jpg'),
           vector: [] }
       else if ~data.target_image.indexOf("capture2")
         assert.deepEqual data, {
           status: 'SUSPICIOUS',
           span: 10,
           threshold: 5,
-          expect_image: '/home/pig/git/tidal-wave/test/fixture/expected/scenario2/capture2.png',
-          target_image: '/home/pig/git/tidal-wave/test/fixture/revision2/scenario2/capture2.png',
+          expect_image: Path.join(__dirname, 'fixture/expected/scenario2/capture2.png'),
+          target_image: Path.join(__dirname, 'fixture/revision2/scenario2/capture2.png'),
           vector: [
              { x: 80, y: 70, dx: -5.360568046569824, dy: -0.0551748163998127 },
              { x: 130, y: 70, dx: -6.001735687255859, dy: -1.3181204795837402 },

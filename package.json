@@ -20,7 +20,8 @@
     "mocha": "^2.0.1"
   },
   "scripts": {
-    "preinstall": "node-gyp configure; node-gyp build",
+    "preinstall": "npm run build",
+    "build": "node-gyp configure; node-gyp build",
     "serve": "node server.js",
     "test": "mocha"
   }
