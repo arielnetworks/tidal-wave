@@ -20,6 +20,8 @@ describe "TidalWave", ->
           threshold: 5,
           expect_image: Path.join(__dirname, 'fixture/expected/scenario1/capture1.jpg'),
           target_image: Path.join(__dirname, 'fixture/revision1/scenario1/capture1.jpg'),
+          height: 279,
+          width: 280,
           vector: []
         }
       else if ~data.target_image.indexOf("capture2")
@@ -29,6 +31,8 @@ describe "TidalWave", ->
           threshold: 5,
           expect_image: Path.join(__dirname, 'fixture/expected/scenario2/capture2.png'),
           target_image: Path.join(__dirname, 'fixture/revision1/scenario2/capture2.png'),
+          height: 117,
+          width: 180,
           vector: []
         }
       else
@@ -48,6 +52,8 @@ describe "TidalWave", ->
           threshold: 5,
           expect_image: Path.join(__dirname, 'fixture/expected/scenario1/capture1.jpg'),
           target_image: Path.join(__dirname, 'fixture/revision2/scenario1/capture1.jpg'),
+          height: 279,
+          width: 280,
           vector: [] }
       else if ~data.target_image.indexOf("capture2")
         assert.deepEqual data, {
@@ -56,6 +62,8 @@ describe "TidalWave", ->
           threshold: 5,
           expect_image: Path.join(__dirname, 'fixture/expected/scenario2/capture2.png'),
           target_image: Path.join(__dirname, 'fixture/revision2/scenario2/capture2.png'),
+          height: 117,
+          width: 180,
           vector: [
              { x: 80, y: 70, dx: -5.360568046569824, dy: -0.0551748163998127 },
              { x: 130, y: 70, dx: -6.001735687255859, dy: -1.3181204795837402 },

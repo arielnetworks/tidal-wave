@@ -21,6 +21,8 @@ namespace tidalwave {
     ErrorCode code;
     std::string message;
     float time;
+    int height;
+    int width;
   };
 
   struct OpticalFlowParameter{

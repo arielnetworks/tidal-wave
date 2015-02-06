@@ -6,8 +6,8 @@
 
 ## なにするもの？
 
-![処理の流れ](http://legion.ariel-networks.com/gitbucket/leviathan/tidal-wave/blob/master/flow.png?raw=true)
-![シーケンス図](http://legion.ariel-networks.com/gitbucket/leviathan/tidal-wave/blob/master/tidalwave-sequence.png?raw=true)
+![処理の流れ](flow.png)
+![シーケンス図](tidalwave-sequence.png)
 
 ## 必要なもの
 
@@ -246,6 +246,8 @@ node index.js
 * threshold: しきい値
 * time: 処理にかかった時間
 * status: ステータス（OK, SUSPICIOUS,ERRORの3つ）
+* height: 画像の高さ
+* width: 画像の幅
 
 ~~~
 {

@@ -68,6 +68,10 @@ namespace tidalwave {
     }
 
     status.time = calculateInternal(expectImg, targetImg, flowx, flowy);
+
+    status.height = expectImg.size().height;
+    status.width = expectImg.size().width;
+
     return status;
   }
 

@@ -23,6 +23,8 @@ namespace tidalwave {
   static Persistent<String> REQUEST_COUNT_SYMBOL = NODE_PSYMBOL("request");
   static Persistent<String> DATA_COUNT_SYMBOL = NODE_PSYMBOL("data");
   static Persistent<String> ERROR_COUNT_SYMBOL = NODE_PSYMBOL("error");
+  static Persistent<String> HEIGHT_SYMBOL = NODE_PSYMBOL("height");
+  static Persistent<String> WIDTH_SYMBOL = NODE_PSYMBOL("width");
 
   void Broker::initialize(Handle<Object> &target) {
     Local<FunctionTemplate> clazz = FunctionTemplate::New(Broker::createInstance);
@@ -166,6 +168,8 @@ namespace tidalwave {
     result->Set(EXPECT_IMAGE_SYMBOL, String::New(value.expect_image.c_str()));
     result->Set(TARGET_IMAGE_SYMBOL, String::New(value.target_image.c_str()));
     result->Set(TIME_SYMBOL, Number::New(value.time));
+    result->Set(HEIGHT_SYMBOL, Integer::New(value.height));
+    result->Set(WIDTH_SYMBOL, Integer::New(value.width));
 
     uint32_t vector_len = 0;
     Local<Array> vectors = Array::New();

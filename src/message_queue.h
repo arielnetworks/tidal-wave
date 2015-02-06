@@ -37,6 +37,8 @@ namespace tidalwave {
 
     std::string status;
     std::string reason;
+    int width;
+    int height;
   };
 
   struct Report {

@@ -80,6 +80,8 @@ namespace tidalwave {
           res.target_image = req.target_image;
           res.span = req.span;
           res.threshold = req.threshold;
+          res.height = status.height;
+          res.width = status.width;
         } else {
           res.status = "ERROR";
           res.reason = status.message;
